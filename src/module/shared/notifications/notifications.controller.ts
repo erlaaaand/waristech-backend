@@ -1,55 +1,54 @@
-import { Controller, Get, Patch, Param, UseGuards, Post } from '@nestjs/common';
+import { Controller, Get, Patch, Param, UseGuards } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../../identity/auth/interface/guards/jwt-auth.guard';
-import { RolesGuard } from '../../identity/auth/interface/guards/roles.guard';
-import { Roles } from '../../identity/auth/interface/decorators/roles.decorator';
-import { UserRole } from '../../identity/users/domains/entities/user.entity';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiOkResponse,
+} from '@nestjs/swagger';
 import { CurrentUser } from '../../identity/auth/interface/decorators/current-user.decorator';
+import { AuthenticatedUser } from '../../identity/auth/domains/entities/jwt-payload.entity';
+import { NotificationEntity } from './entities/notification.entity';
 
 @ApiTags('Notifications')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT')
 @UseGuards(JwtAuthGuard)
 @Controller('notifications')
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get all notifications for current user' })
-  async getMyNotifications(@CurrentUser('sub') userId: string) {
-    return this.notificationsService.getUserNotifications(userId);
+  @ApiOperation({
+    summary: 'Mendapatkan semua notifikasi pengguna yang sedang login',
+  })
+  @ApiOkResponse({ description: 'Daftar notifikasi pengguna.' })
+  async getMyNotifications(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<NotificationEntity[]> {
+    return this.notificationsService.getUserNotifications(user.sub);
   }
 
   @Patch(':id/read')
-  @ApiOperation({ summary: 'Mark a notification as read' })
+  @ApiOperation({ summary: 'Tandai satu notifikasi sebagai telah dibaca' })
+  @ApiOkResponse({ description: 'Notifikasi berhasil ditandai telah dibaca.' })
   async markAsRead(
     @Param('id') id: string,
-    @CurrentUser('sub') userId: string,
-  ) {
-    await this.notificationsService.markAsRead(id, userId);
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<{ success: boolean }> {
+    await this.notificationsService.markAsRead(id, user.sub);
     return { success: true };
   }
 
   @Patch('read-all')
-  @ApiOperation({ summary: 'Mark all notifications as read' })
-  async markAllAsRead(@CurrentUser('sub') userId: string) {
-    await this.notificationsService.markAllAsRead(userId);
-    return { success: true };
-  }
-
-  @Post('blast-deadline')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({
-    summary: 'Blast deadline reminder to all participants (Admin Only)',
+  @ApiOperation({ summary: 'Tandai semua notifikasi sebagai telah dibaca' })
+  @ApiOkResponse({
+    description: 'Semua notifikasi berhasil ditandai telah dibaca.',
   })
-  async blastDeadline() {
-    await this.notificationsService.sendToRoles([UserRole.CUSTOMER], {
-      title: 'Peringatan Deadline',
-      message:
-        'Halo Peserta! Jangan lupa untuk segera mengunggah karya Anda sebelum batas waktu yang telah ditentukan.',
-      type: 'WARNING',
-    });
-    return { success: true, message: 'Deadline reminder blasted' };
+  async markAllAsRead(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<{ success: boolean }> {
+    await this.notificationsService.markAllAsRead(user.sub);
+    return { success: true };
   }
 }

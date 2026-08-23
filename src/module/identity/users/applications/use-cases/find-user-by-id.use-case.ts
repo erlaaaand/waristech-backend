@@ -6,6 +6,8 @@ import { UserValidator } from '../../domains/validators/user.validator';
 import { USER_REPOSITORY_TOKEN } from '../../infrastructures/repositories/user.repository.interface';
 import type { IUserRepository } from '../../infrastructures/repositories/user.repository.interface';
 
+import { AuthenticatedUser } from '../../../auth/domains/entities/jwt-payload.entity';
+
 @Injectable()
 export class FindUserByIdUseCase {
   constructor(
@@ -15,9 +17,17 @@ export class FindUserByIdUseCase {
     private readonly mapper: UserMapper,
   ) {}
 
-  async execute(id: string): Promise<UserResponseDto> {
+  async execute(
+    id: string,
+    requestingUser?: AuthenticatedUser,
+  ): Promise<UserResponseDto> {
     const user = await this.userRepo.findById(id);
     this.validator.assertExists(user, id);
+
+    if (requestingUser) {
+      this.validator.assertHasAccessToProfile(requestingUser, id);
+    }
+
     return this.mapper.toResponseDto(user);
   }
 }

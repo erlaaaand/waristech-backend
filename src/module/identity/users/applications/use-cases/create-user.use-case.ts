@@ -40,6 +40,8 @@ export class CreateUserUseCase {
       password: hashedPassword,
       fullName: dto.fullName ?? undefined,
       phoneNumber: dto.phoneNumber,
+      nik: dto.nik ?? null,
+      role: dto.role ?? undefined,
       otpCode: dto.otpCode ?? null,
       otpExpiresAt: dto.otpExpiresAt ?? null,
       isEmailVerified: dto.isEmailVerified ?? false,

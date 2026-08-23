@@ -1,10 +1,5 @@
 // src/users/applications/use-cases/update-user.use-case.ts
-import {
-  ForbiddenException,
-  Inject,
-  Injectable,
-  BadRequestException,
-} from '@nestjs/common';
+import { Inject, Injectable, BadRequestException } from '@nestjs/common';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { UserResponseDto } from '../dto/user-response.dto';
 import { UserDomainService } from '../../domains/services/user-domain.service';
@@ -12,6 +7,8 @@ import { UserMapper } from '../../domains/mappers/user.mapper';
 import { UserValidator } from '../../domains/validators/user.validator';
 import { USER_REPOSITORY_TOKEN } from '../../infrastructures/repositories/user.repository.interface';
 import type { IUserRepository } from '../../infrastructures/repositories/user.repository.interface';
+
+import { AuthenticatedUser } from '../../../auth/domains/entities/jwt-payload.entity';
 
 @Injectable()
 export class UpdateUserUseCase {
@@ -26,17 +23,12 @@ export class UpdateUserUseCase {
   async execute(
     id: string,
     dto: UpdateUserDto,
-    requestingUserId: string,
+    requestingUser: AuthenticatedUser,
   ): Promise<UserResponseDto> {
     const user = await this.userRepo.findByIdWithPassword(id);
 
     this.validator.assertExists(user, id);
-
-    if (user.id !== requestingUserId) {
-      throw new ForbiddenException(
-        'Anda tidak memiliki izin untuk mengubah profil user lain.',
-      );
-    }
+    this.validator.assertHasAccessToProfile(requestingUser, id);
 
     this.validator.assertIsActive(user);
 

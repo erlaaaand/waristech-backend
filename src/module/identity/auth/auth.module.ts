@@ -7,6 +7,8 @@ import type { StringValue } from 'ms';
 
 // External Modules
 import { UserModule } from '../users/user.module';
+import { EkycModule } from '../ekyc/ekyc.module';
+import { InheritanceModule } from '../../inheritance/inheritance.module';
 
 // Strategy
 import { JwtStrategy } from './infrastructures/strategies/jwt.strategy';
@@ -15,15 +17,20 @@ import { JwtStrategy } from './infrastructures/strategies/jwt.strategy';
 import { TokenService } from './domains/services/token.service';
 import { AuthValidator } from './domains/validators/auth.validator';
 import { AuthMapper } from './domains/mappers/auth.mapper';
+import { OtpService } from './domains/services/otp.service';
 
 // Use Cases
 import { LoginUseCase } from './applications/use-cases/login.use-case';
-import { RegisterUseCase } from './applications/use-cases/register.use-case';
+
+import { RegisterPewarisUseCase } from './applications/use-cases/register-pewaris.use-case';
+import { RegisterAhliWarisUseCase } from './applications/use-cases/register-ahli-waris.use-case';
 import { LogoutService } from './applications/use-cases/logout.use-case';
 import { VerifyEmailUseCase } from './applications/use-cases/verify-email.use-case';
 import { ForgotPasswordUseCase } from './applications/use-cases/forgot-password.use-case';
 import { ResetPasswordUseCase } from './applications/use-cases/reset-password.use-case';
 import { ResendOtpUseCase } from './applications/use-cases/resend-otp.use-case';
+import { GenerateMagicLinkUseCase } from './applications/use-cases/generate-magic-link.use-case';
+import { VerifyMagicLinkOtpUseCase } from './applications/use-cases/verify-magic-link-otp.use-case';
 
 // Orchestrator
 import { AuthOrchestrator } from './applications/orchestrator/auth.orchestrator';
@@ -40,6 +47,8 @@ import { UserLoggedInListener } from './infrastructures/listeners/user-logged-in
 @Module({
   imports: [
     UserModule,
+    EkycModule,
+    InheritanceModule,
 
     PassportModule.register({ defaultStrategy: 'jwt' }),
 
@@ -64,10 +73,13 @@ import { UserLoggedInListener } from './infrastructures/listeners/user-logged-in
   providers: [
     JwtStrategy,
     TokenService,
+    OtpService,
     AuthValidator,
     AuthMapper,
     LoginUseCase,
-    RegisterUseCase,
+
+    RegisterPewarisUseCase,
+    RegisterAhliWarisUseCase,
     AuthOrchestrator,
     JwtAuthGuard,
     UserLoggedInListener,
@@ -76,6 +88,8 @@ import { UserLoggedInListener } from './infrastructures/listeners/user-logged-in
     ForgotPasswordUseCase,
     ResetPasswordUseCase,
     ResendOtpUseCase,
+    GenerateMagicLinkUseCase,
+    VerifyMagicLinkOtpUseCase,
   ],
   exports: [JwtAuthGuard, JwtModule, TokenService],
 })

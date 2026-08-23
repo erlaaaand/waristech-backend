@@ -15,8 +15,10 @@ import { StoredFileEntity } from '../../../../shared/storage/domains/entities/st
 
 export enum UserRole {
   ADMIN = 'ADMIN',
-  CUSTOMER = 'CUSTOMER',
-  STAFF = 'STAFF',
+  PEWARIS = 'PEWARIS',
+  AHLI_WARIS = 'AHLI_WARIS',
+  NOTARIS = 'NOTARIS',
+  GUEST = 'GUEST', // Saksi / Kontak Darurat
 }
 
 @Entity({ name: 'users' })
@@ -41,6 +43,9 @@ export class UserEntity {
   @Column({ type: 'varchar', length: 150, nullable: false })
   fullName: string = '';
 
+  @Column({ type: 'varchar', length: 16, nullable: true })
+  nik: string | null = null;
+
   // ── Foto Profil ──────────────────────────────────────────────
   @Column({ type: 'varchar', length: 512, nullable: true })
   avatarUrl: string | null = null;
@@ -58,9 +63,9 @@ export class UserEntity {
   @Column({
     type: 'enum',
     enum: UserRole,
-    default: UserRole.CUSTOMER,
+    default: UserRole.PEWARIS,
   })
-  role: UserRole = UserRole.CUSTOMER;
+  role: UserRole = UserRole.PEWARIS;
 
   // ── OTP & Verification ───────────────────────────────────────
   @Column({ type: 'boolean', default: false })

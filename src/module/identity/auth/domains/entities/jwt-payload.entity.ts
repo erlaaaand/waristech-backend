@@ -1,8 +1,9 @@
-// src/auth/domains/entities/jwt-payload.entity.ts
+import { UserRole } from '../../../users/domains/entities/user.entity';
+
 export class JwtPayload {
   sub: string = '';
   email: string = '';
-  role: string = '';
+  role: UserRole | string = '';
   iss?: string;
   aud?: string | string[];
   iat?: number;
@@ -12,5 +13,5 @@ export class JwtPayload {
 export class AuthenticatedUser {
   sub: string = '';
   email: string = '';
-  role: string = '';
+  role: UserRole | string = '';
 }

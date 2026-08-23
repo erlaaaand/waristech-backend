@@ -1,7 +1,11 @@
 // src/auth/domains/validators/auth.validator.ts
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { UserEntity } from '../../../users/domains/entities/user.entity';
+import {
+  InvalidCredentialsError,
+  AccountDisabledError,
+} from '../exceptions/auth.exception';
 
 const DUMMY_HASH =
   '$2b$10$EpRnTzVlqHNP0.fUbXUwSOyuiNb/k/cG/MRcLeGimGNA.n16vLzmu';
@@ -10,13 +14,13 @@ const DUMMY_HASH =
 export class AuthValidator {
   assertUserExists(user: UserEntity | null): asserts user is UserEntity {
     if (!user) {
-      throw new UnauthorizedException('Email atau password tidak valid');
+      throw new InvalidCredentialsError();
     }
   }
 
   assertUserIsActive(user: UserEntity): void {
     if (!user.isActive) {
-      throw new UnauthorizedException('Akun ini telah dinonaktifkan');
+      throw new AccountDisabledError();
     }
   }
 
@@ -28,7 +32,7 @@ export class AuthValidator {
     const isMatch = await bcrypt.compare(plainPassword, hashToCompare);
 
     if (!isMatch || !hashedPassword) {
-      throw new UnauthorizedException('Email atau password tidak valid');
+      throw new InvalidCredentialsError();
     }
   }
 }

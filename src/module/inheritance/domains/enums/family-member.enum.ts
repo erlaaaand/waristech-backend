@@ -1,0 +1,11 @@
+export enum RelationshipType {
+  NASAB = 'NASAB',
+  NON_NASAB = 'NON_NASAB',
+}
+
+export enum FamilyMemberStatus {
+  PENDING_CONFIRMATION = 'PENDING_CONFIRMATION',
+  PENDING_VERIFICATION = 'PENDING_VERIFICATION',
+  VERIFIED = 'VERIFIED',
+  REJECTED = 'REJECTED',
+}

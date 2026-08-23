@@ -1,38 +1,42 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Notification } from './entities/notification.entity';
+import { Repository, In } from 'typeorm';
+import {
+  NotificationEntity,
+  NotificationType,
+} from './entities/notification.entity';
 import { NotificationsGateway } from './notifications.gateway';
 import {
   UserEntity,
   UserRole,
 } from '../../identity/users/domains/entities/user.entity';
-import { In } from 'typeorm';
 
 export interface CreateNotificationDto {
   userId: string;
   title: string;
   message: string;
-  type?: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
+  type?: NotificationType;
 }
 
 @Injectable()
 export class NotificationsService {
   constructor(
-    @InjectRepository(Notification)
-    private readonly notificationRepo: Repository<Notification>,
+    @InjectRepository(NotificationEntity)
+    private readonly notificationRepo: Repository<NotificationEntity>,
     @InjectRepository(UserEntity)
     private readonly userRepo: Repository<UserEntity>,
     private readonly notificationsGateway: NotificationsGateway,
   ) {}
 
   // 1. Membuat dan menyimpan notifikasi lalu memancarkannya
-  async sendNotification(dto: CreateNotificationDto): Promise<Notification> {
+  async sendNotification(
+    dto: CreateNotificationDto,
+  ): Promise<NotificationEntity> {
     const notification = this.notificationRepo.create({
       userId: dto.userId,
       title: dto.title,
       message: dto.message,
-      type: dto.type || 'INFO',
+      type: dto.type || NotificationType.INFO,
     });
 
     const saved = await this.notificationRepo.save(notification);
@@ -43,7 +47,7 @@ export class NotificationsService {
     return saved;
   }
 
-  // 1b. Mengirim notifikasi berdasarkan role (misal: ADMIN, CUSTOMER)
+  // 1b. Mengirim notifikasi berdasarkan role (misal: PEWARIS, AHLI_WARIS, ADMIN)
   async sendToRoles(
     roles: UserRole[],
     dto: Omit<CreateNotificationDto, 'userId'>,
@@ -62,7 +66,7 @@ export class NotificationsService {
   }
 
   // 2. Mendapatkan semua notifikasi pengguna (yang belum dan sudah dibaca)
-  async getUserNotifications(userId: string): Promise<Notification[]> {
+  async getUserNotifications(userId: string): Promise<NotificationEntity[]> {
     return this.notificationRepo.find({
       where: { userId },
       order: { createdAt: 'DESC' },

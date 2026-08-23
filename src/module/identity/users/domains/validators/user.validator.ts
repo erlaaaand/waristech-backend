@@ -1,11 +1,13 @@
 import {
   ConflictException,
   Injectable,
+  ForbiddenException,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { compare } from 'bcrypt';
-import { UserEntity } from '../entities/user.entity';
+import { UserEntity, UserRole } from '../entities/user.entity';
+import { AuthenticatedUser } from '../../../auth/domains/entities/jwt-payload.entity';
 
 @Injectable()
 export class UserValidator {
@@ -38,6 +40,20 @@ export class UserValidator {
 
     if (!isMatch) {
       throw new UnauthorizedException('Password saat ini tidak sesuai');
+    }
+  }
+
+  assertHasAccessToProfile(
+    requestingUser: AuthenticatedUser,
+    targetUserId: string,
+  ): void {
+    if (
+      String(requestingUser.role) !== String(UserRole.ADMIN) &&
+      requestingUser.sub !== targetUserId
+    ) {
+      throw new ForbiddenException(
+        'Anda tidak memiliki izin untuk mengakses profil user ini.',
+      );
     }
   }
 }

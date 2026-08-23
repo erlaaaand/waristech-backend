@@ -6,13 +6,7 @@ import {
   IsString,
   MinLength,
 } from 'class-validator';
-
-// Asumsi kamu memiliki enum UserRole
-export enum UserRole {
-  ADMIN = 'ADMIN',
-  CUSTOMER = 'CUSTOMER',
-  STAFF = 'STAFF',
-}
+import { UserRole } from '../../domains/entities/user.entity';
 
 export class AdminCreateUserDto {
   @ApiProperty({ example: 'peserta@gmail.com' })
@@ -31,8 +25,8 @@ export class AdminCreateUserDto {
   @IsNotEmpty()
   fullName: string = '';
 
-  @ApiProperty({ enum: UserRole, example: UserRole.CUSTOMER })
+  @ApiProperty({ enum: UserRole, example: UserRole.NOTARIS })
   @IsEnum(UserRole)
   @IsNotEmpty()
-  role: UserRole = UserRole.CUSTOMER;
+  role: UserRole = UserRole.NOTARIS;
 }

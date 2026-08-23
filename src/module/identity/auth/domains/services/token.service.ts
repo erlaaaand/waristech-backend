@@ -1,12 +1,12 @@
 // src/auth/domains/services/token.service.ts
-import {
-  Injectable,
-  InternalServerErrorException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService, TokenExpiredError, JsonWebTokenError } from '@nestjs/jwt';
 import { AuthenticatedUser, JwtPayload } from '../entities/jwt-payload.entity';
+import {
+  AuthTokenExpiredError,
+  InvalidTokenError,
+} from '../exceptions/auth.exception';
 
 export type JwtExpiresInFormat =
   `${number}d` | `${number}h` | `${number}m` | `${number}s` | number;
@@ -40,23 +40,17 @@ export class TokenService {
       });
     } catch (err: unknown) {
       if (err instanceof TokenExpiredError) {
-        throw new UnauthorizedException(
-          'Token sudah kadaluarsa. Silakan login kembali.',
-        );
+        throw new AuthTokenExpiredError();
       }
 
       if (err instanceof JsonWebTokenError) {
         // Pesan generik — tidak bocorkan detail teknis ke client
-        throw new UnauthorizedException(
-          'Token tidak valid atau telah dimanipulasi.',
-        );
+        throw new InvalidTokenError();
       }
 
-      // Error tidak terduga — log dan throw 500
+      // Error tidak terduga — throw standard Error
       const message = err instanceof Error ? err.message : String(err);
-      throw new InternalServerErrorException(
-        `Gagal memverifikasi token: ${message}`,
-      );
+      throw new Error(`Gagal memverifikasi token: ${message}`);
     }
   }
 

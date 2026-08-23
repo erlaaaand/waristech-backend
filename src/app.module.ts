@@ -30,6 +30,9 @@ import { AuditModule } from './module/shared/audit/audit.module';
 import { AuditInterceptor } from './module/shared/audit/interceptors/audit.interceptor';
 import { GlobalExceptionFilter } from './module/shared/common/filters/global-exception.filter';
 import { LoggingMiddleware } from './module/shared/common/middlewares/logging.middleware';
+import { InheritanceModule } from './module/inheritance/inheritance.module';
+import { AssetModule } from './module/assets/asset.module';
+import { CalculationModule } from './module/calculation/calculation.module';
 
 @Module({
   imports: [
@@ -73,7 +76,7 @@ import { LoggingMiddleware } from './module/shared/common/middlewares/logging.mi
       useFactory: (configService: ConfigService) => {
         const uri = configService.get<string>(
           'MONGODB_URI',
-          'mongodb://localhost:27017/hanifa_elektronik_audit',
+          'mongodb://localhost:27017/waristech_audit',
         );
         return {
           uri,
@@ -155,6 +158,9 @@ import { LoggingMiddleware } from './module/shared/common/middlewares/logging.mi
     StorageModule,
     MailModule,
     NotificationsModule,
+    InheritanceModule,
+    AssetModule,
+    CalculationModule,
   ],
   controllers: [],
   providers: [

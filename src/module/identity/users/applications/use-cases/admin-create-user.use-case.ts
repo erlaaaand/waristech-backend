@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { AdminCreateUserDto } from '../dto/admin-create-user.dto';
-import { UserEntity } from '../../domains/entities/user.entity';
+import { UserEntity, UserRole } from '../../domains/entities/user.entity';
 import {
   type IUserRepository,
   USER_REPOSITORY_TOKEN,
@@ -24,6 +24,12 @@ export class AdminCreateUserUseCase {
   async execute(
     dto: AdminCreateUserDto,
   ): Promise<{ message: string; userId: string }> {
+    // 0. Validasi Role: Admin hanya boleh membuat NOTARIS atau ADMIN baru
+    if (dto.role === UserRole.PEWARIS || dto.role === UserRole.AHLI_WARIS) {
+      throw new ConflictException(
+        'Admin tidak diperbolehkan membuat akun Pewaris atau Ahli Waris. Pewaris melakukan registrasi mandiri, Ahli Waris melalui undangan.',
+      );
+    }
     // 1. Cek apakah email sudah terdaftar
     const emailExists = await this.userRepo.existsByEmail(dto.email);
     if (emailExists) {

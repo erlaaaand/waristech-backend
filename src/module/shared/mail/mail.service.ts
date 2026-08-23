@@ -69,8 +69,7 @@ export class MailService implements OnModuleInit {
     try {
       const sender = this.configService.get<string>('EMAIL_USER');
       const appName =
-        this.configService.get<string>('EMAIL_FROM_NAME') ||
-        'Hanifa Elektronik';
+        this.configService.get<string>('EMAIL_FROM_NAME') || 'WarisTech';
 
       await this.transporter.sendMail({
         from: `"${appName}" <${sender}>`,
@@ -123,8 +122,7 @@ export class MailService implements OnModuleInit {
     try {
       const sender = this.configService.get<string>('EMAIL_USER');
       const appName =
-        this.configService.get<string>('EMAIL_FROM_NAME') ||
-        'Hanifa Elektronik';
+        this.configService.get<string>('EMAIL_FROM_NAME') || 'WarisTech';
 
       await this.transporter.sendMail({
         from: `"${appName}" <${sender}>`,

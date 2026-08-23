@@ -24,14 +24,19 @@ import {
   ApiConflictResponse,
   ApiBody,
 } from '@nestjs/swagger';
+import { ConfigService } from '@nestjs/config';
 import { AuthOrchestrator } from '../../applications/orchestrator/auth.orchestrator';
 import { LoginDto } from '../../applications/dto/login.dto';
-import { RegisterDto } from '../../applications/dto/register.dto';
+
+import { RegisterPewarisDto } from '../../applications/dto/register-pewaris.dto';
+import { RegisterAhliWarisDto } from '../../applications/dto/register-ahli-waris.dto';
 import { AuthResponseDto } from '../../applications/dto/auth-response.dto';
 import { VerifyEmailDto } from '../../applications/dto/verify-email.dto';
 import { ForgotPasswordDto } from '../../applications/dto/forgot-password.dto';
 import { ResetPasswordDto } from '../../applications/dto/reset-password.dto';
 import { ResendOtpDto } from '../../applications/dto/resend-otp.dto';
+import { GenerateMagicLinkDto } from '../../applications/dto/generate-magic-link.dto';
+import { VerifyMagicLinkOtpDto } from '../../applications/dto/verify-magic-link-otp.dto';
 import { AuthExceptionFilter } from '../filters/auth-exception.filter';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { Public } from '../decorators/public.decorator';
@@ -50,9 +55,27 @@ import {
 @UseFilters(AuthExceptionFilter)
 @UseGuards(JwtAuthGuard)
 export class AuthController {
-  constructor(private readonly orchestrator: AuthOrchestrator) {}
+  constructor(
+    private readonly orchestrator: AuthOrchestrator,
+    private readonly configService: ConfigService,
+  ) {}
 
-  // ── Register ───────────────────────────────────────────────────────────────
+  private getCookieOptions(maxAge: number) {
+    const isProduction =
+      this.configService.get<string>('NODE_ENV') === 'production';
+    const domain = this.configService.get<string>('COOKIE_DOMAIN');
+
+    return {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? ('none' as const) : ('lax' as const),
+      path: '/',
+      domain: isProduction ? domain || undefined : undefined,
+      maxAge,
+    };
+  }
+
+  // ── Register Pewaris (Self-Service) ────────────────────────────────────────
 
   @Public()
   @Audit({
@@ -60,55 +83,64 @@ export class AuthController {
     category: AuditCategory.AUTH,
     resource: 'User',
     severity: AuditSeverity.INFO,
-    description: 'Pendaftaran akun pengguna baru',
+    description: 'Pendaftaran akun Pewaris baru (Self-Service)',
   })
-  @Post('register')
+  @Post('register/pewaris')
   @HttpCode(HttpStatus.CREATED)
   @Throttle({ strict: { limit: 100, ttl: 60_000 } })
   @ApiOperation({
-    summary: 'Daftar akun baru',
+    summary: 'Daftar akun Pewaris (Self-Service)',
     description:
-      'Membuat akun pengguna baru. JWT token langsung dikembalikan ' +
-      'sehingga user bisa langsung mengakses endpoint lain.\n\n' +
-      '**Tidak memerlukan autentikasi.**\n\n' +
-      '**Rate limit**: 5 request/menit per IP.',
-    operationId: 'authRegister',
+      'Membuat akun Pewaris baru dengan menyertakan NIK 16 digit.\n\n' +
+      'Sistem secara otomatis menetapkan peran sebagai `PEWARIS`.\n\n' +
+      '**Tidak memerlukan autentikasi.**',
+    operationId: 'authRegisterPewaris',
   })
   @ApiCreatedResponse({
-    type: AuthResponseDto,
-    description:
-      'Registrasi berhasil. Gunakan `accessToken` di header `Authorization: Bearer <token>`.',
+    description: 'Registrasi Pewaris berhasil. Silakan cek email untuk OTP.',
   })
   @ApiBadRequestResponse({
-    description:
-      'Validasi gagal — email format salah, password terlalu lemah, dll.',
-    schema: {
-      example: {
-        statusCode: 400,
-        message: ['Format email tidak valid', 'Password minimal 8 karakter'],
-        error: 'BadRequestException',
-        module: 'auth',
-      },
-    },
+    description: 'Validasi gagal — NIK salah, email format salah, dll.',
   })
-  @ApiConflictResponse({
-    description: 'Email sudah terdaftar.',
-    schema: {
-      example: {
-        statusCode: 409,
-        message: "Email 'x@y.com' sudah digunakan",
-        error: 'ConflictException',
-        module: 'auth',
-      },
-    },
-  })
-  @ApiTooManyRequestsResponse({
-    description: 'Terlalu banyak percobaan. Coba lagi dalam 1 menit.',
-  })
-  register(
-    @Body() dto: RegisterDto,
+  @ApiConflictResponse({ description: 'Email atau NIK sudah terdaftar.' })
+  registerPewaris(
+    @Body() dto: RegisterPewarisDto,
   ): Promise<{ message: string; userId: string }> {
-    return this.orchestrator.register(dto);
+    return this.orchestrator.registerPewaris(dto);
+  }
+
+  // ── Register Ahli Waris (Closed-Loop / Invitation) ─────────────────────────
+
+  @Public()
+  @Audit({
+    action: AuditAction.AUTH_REGISTER,
+    category: AuditCategory.AUTH,
+    resource: 'User',
+    severity: AuditSeverity.INFO,
+    description: 'Pendaftaran akun Ahli Waris berbasis undangan',
+  })
+  @Post('register/ahli-waris')
+  @HttpCode(HttpStatus.CREATED)
+  @Throttle({ strict: { limit: 100, ttl: 60_000 } })
+  @ApiOperation({
+    summary: 'Daftar akun Ahli Waris (Berbasis Undangan)',
+    description:
+      'Membuat akun Ahli Waris baru dengan kode undangan (`invitationCode`).\n\n' +
+      'Sistem memvalidasi kode undangan dan menetapkan peran sebagai `AHLI_WARIS`.\n\n' +
+      '**Tidak memerlukan autentikasi.**',
+    operationId: 'authRegisterAhliWaris',
+  })
+  @ApiCreatedResponse({
+    description: 'Registrasi Ahli Waris berhasil. Silakan cek email untuk OTP.',
+  })
+  @ApiBadRequestResponse({
+    description: 'Kode undangan tidak valid atau format data salah.',
+  })
+  @ApiConflictResponse({ description: 'Email sudah terdaftar.' })
+  registerAhliWaris(
+    @Body() dto: RegisterAhliWarisDto,
+  ): Promise<{ message: string; userId: string }> {
+    return this.orchestrator.registerAhliWaris(dto);
   }
 
   // ── Login ──────────────────────────────────────────────────────────────────
@@ -161,17 +193,11 @@ export class AuthController {
     const result = await this.orchestrator.login(dto);
 
     // Set HttpOnly Cookie
-    res.cookie('accessToken', result.accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      path: '/',
-      domain:
-        process.env.NODE_ENV === 'production'
-          ? process.env.COOKIE_DOMAIN || undefined
-          : undefined,
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 Hari
-    });
+    res.cookie(
+      'accessToken',
+      result.accessToken,
+      this.getCookieOptions(7 * 24 * 60 * 60 * 1000), // 7 Hari
+    );
 
     // Mengembalikan data user (tanpa mengekspos token di JSON body)
     return {
@@ -233,20 +259,7 @@ export class AuthController {
     await this.orchestrator.logout(user.sub);
 
     // 2. Hapus cookie di browser klien
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite:
-        process.env.NODE_ENV === 'production'
-          ? ('none' as const)
-          : ('lax' as const),
-      path: '/',
-      domain:
-        process.env.NODE_ENV === 'production'
-          ? process.env.COOKIE_DOMAIN || undefined
-          : undefined,
-      maxAge: 0, // maxAge 0 akan menghancurkan cookie
-    };
+    const cookieOptions = this.getCookieOptions(0); // maxAge 0 akan menghancurkan cookie
 
     res.cookie('accessToken', '', cookieOptions);
     res.cookie('x-csrf-token', '', cookieOptions);
@@ -290,17 +303,11 @@ export class AuthController {
     const result = await this.orchestrator.verifyEmail(dto.email, dto.otp);
 
     // Set HttpOnly Cookie
-    res.cookie('accessToken', result.accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      path: '/',
-      domain:
-        process.env.NODE_ENV === 'production'
-          ? process.env.COOKIE_DOMAIN || undefined
-          : undefined,
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 Hari
-    });
+    res.cookie(
+      'accessToken',
+      result.accessToken,
+      this.getCookieOptions(7 * 24 * 60 * 60 * 1000), // 7 Hari
+    );
 
     return {
       message: 'Verifikasi berhasil',
@@ -359,5 +366,52 @@ export class AuthController {
   })
   async resendOtp(@Body() dto: ResendOtpDto): Promise<{ message: string }> {
     return this.orchestrator.resendOtp(dto);
+  }
+
+  @Public()
+  @Post('magic-link/generate')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ strict: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({
+    summary: 'Generate Magic Link untuk Saksi/Kontak Darurat (Guest)',
+    description: 'Menghasilkan URL berbatas waktu untuk proses validasi.',
+    operationId: 'authGenerateMagicLink',
+  })
+  @ApiOkResponse({ description: 'Magic link berhasil digenerate.' })
+  async generateMagicLink(
+    @Body() dto: GenerateMagicLinkDto,
+  ): Promise<{ message: string }> {
+    return this.orchestrator.generateMagicLink(dto);
+  }
+
+  @Public()
+  @Post('magic-link/verify')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ strict: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({
+    summary: 'Verify Magic Link OTP (Guest Login)',
+    description: 'Login sementara untuk Guest (Saksi/Kontak Darurat).',
+    operationId: 'authVerifyMagicLink',
+  })
+  @ApiOkResponse({
+    description: 'Verifikasi berhasil, mengembalikan token Guest.',
+  })
+  async verifyMagicLink(
+    @Body() dto: VerifyMagicLinkOtpDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.orchestrator.verifyMagicLinkOtp(dto);
+
+    // Set HttpOnly Cookie for Guest
+    res.cookie(
+      'accessToken',
+      result.accessToken,
+      this.getCookieOptions(1 * 24 * 60 * 60 * 1000), // 1 Hari untuk Guest
+    );
+
+    return {
+      message: 'Verifikasi Magic Link berhasil',
+      user: result.user,
+    };
   }
 }

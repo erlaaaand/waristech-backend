@@ -8,6 +8,14 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import {
+  InvalidCredentialsError,
+  AccountDisabledError,
+  AuthTokenExpiredError,
+  InvalidTokenError,
+  InvalidInvitationCodeError,
+} from '../../domains/exceptions/auth.exception';
+import { EkycValidationException } from '../../../ekyc/domains/exceptions/ekyc.exception';
 
 interface AuthErrorResponseBody {
   statusCode: number;
@@ -18,29 +26,52 @@ interface AuthErrorResponseBody {
   module: 'auth';
 }
 
-@Catch(HttpException)
+@Catch(HttpException, Error)
 export class AuthExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(AuthExceptionFilter.name);
 
-  catch(exception: HttpException, host: ArgumentsHost): void {
+  catch(exception: Error | HttpException, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const res = ctx.getResponse<Response>();
     const req = ctx.getRequest<Request>();
 
-    const status = exception.getStatus
-      ? exception.getStatus()
-      : HttpStatus.INTERNAL_SERVER_ERROR;
+    let status = HttpStatus.INTERNAL_SERVER_ERROR;
+    let message: string | string[] =
+      'Terjadi kesalahan internal pada layanan Autentikasi.';
+    let errorName = 'Internal Server Error';
 
-    const exceptionResponse = exception.getResponse();
-    let message =
-      typeof exceptionResponse === 'object' && 'message' in exceptionResponse
-        ? (exceptionResponse as { message: string | string[] }).message
-        : exception.message;
+    if (exception instanceof HttpException) {
+      status = exception.getStatus();
+      const exceptionResponse = exception.getResponse();
+      message =
+        typeof exceptionResponse === 'object' && 'message' in exceptionResponse
+          ? (exceptionResponse as { message: string | string[] }).message
+          : exception.message;
+      errorName = exception.name;
+    } else if (
+      exception instanceof InvalidCredentialsError ||
+      exception instanceof AccountDisabledError ||
+      exception instanceof AuthTokenExpiredError ||
+      exception instanceof InvalidTokenError
+    ) {
+      status = HttpStatus.UNAUTHORIZED;
+      message = exception.message;
+      errorName = exception.name;
+    } else if (exception instanceof InvalidInvitationCodeError) {
+      status = HttpStatus.BAD_REQUEST;
+      message = exception.message;
+      errorName = exception.name;
+    } else if (exception instanceof EkycValidationException) {
+      status = HttpStatus.UNPROCESSABLE_ENTITY;
+      message = exception.message;
+      errorName = 'NIK_VALIDATION_FAILED';
+    }
 
-    if (status === 500) {
+    if (status === HttpStatus.INTERNAL_SERVER_ERROR) {
       this.logger.error(
         `[Auth] SYSTEM ERROR ${req.method} ${req.url} → Asli: ${JSON.stringify(message)} | Stack: ${exception.stack}`,
       );
+      // Hindari membocorkan detail internal
       message = 'Terjadi kesalahan internal pada layanan Autentikasi.';
     } else {
       this.logger.warn(
@@ -53,7 +84,7 @@ export class AuthExceptionFilter implements ExceptionFilter {
       timestamp: new Date().toISOString(),
       path: req.url,
       message,
-      error: status === 500 ? 'Internal Server Error' : exception.name,
+      error: errorName,
       module: 'auth',
     };
 

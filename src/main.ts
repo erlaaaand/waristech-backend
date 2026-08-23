@@ -174,8 +174,8 @@ async function bootstrap(): Promise<void> {
   // 9. Swagger Config
   if (!isProd) {
     const swaggerConfig = new DocumentBuilder()
-      .setTitle('Hanifa Elektronik API')
-      .setDescription('Dokumentasi REST API Hanifa Elektronik')
+      .setTitle('WarisTech API')
+      .setDescription('Dokumentasi REST API WarisTech')
       .setVersion('1.0')
       .addBearerAuth(
         {

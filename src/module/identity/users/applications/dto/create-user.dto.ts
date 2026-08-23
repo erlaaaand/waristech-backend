@@ -1,6 +1,6 @@
-// src/users/applications/dto/create-user.dto.ts
 import {
   IsEmail,
+  IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -8,6 +8,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { UserRole } from '../../domains/entities/user.entity';
 
 export class CreateUserDto {
   @IsEmail({}, { message: 'Format email tidak valid' })
@@ -45,4 +46,11 @@ export class CreateUserDto {
 
   @IsOptional()
   isActive?: boolean;
+
+  @IsOptional()
+  @IsEnum(UserRole)
+  role?: UserRole;
+
+  @IsOptional()
+  nik?: string;
 }

@@ -14,6 +14,7 @@ import {
   type FindAllUsersQuery,
   type PaginatedResult,
 } from '../../infrastructures/repositories/user.repository.interface';
+import { AuthenticatedUser } from '../../../auth/domains/entities/jwt-payload.entity';
 
 @Injectable()
 export class UserOrchestrator {
@@ -27,8 +28,11 @@ export class UserOrchestrator {
     private readonly findAllUsersUc: FindAllUsersUseCase,
   ) {}
 
-  getById(id: string): Promise<UserResponseDto> {
-    return this.findById.execute(id);
+  getById(
+    id: string,
+    requestingUser: AuthenticatedUser,
+  ): Promise<UserResponseDto> {
+    return this.findById.execute(id, requestingUser);
   }
 
   getByEmail(email: string): Promise<UserResponseDto> {
@@ -38,9 +42,9 @@ export class UserOrchestrator {
   update(
     id: string,
     dto: UpdateUserDto,
-    requestingUserId: string,
+    requestingUser: AuthenticatedUser,
   ): Promise<UserResponseDto> {
-    return this.updateUser.execute(id, dto, requestingUserId);
+    return this.updateUser.execute(id, dto, requestingUser);
   }
 
   updateAvatar(userId: string, avatarUrl: string): Promise<UserResponseDto> {

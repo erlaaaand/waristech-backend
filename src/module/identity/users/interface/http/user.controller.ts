@@ -1,18 +1,16 @@
-// src/users/interface/http/user.controller.ts
 import {
   Body,
   Controller,
-  ForbiddenException,
   Get,
   HttpCode,
   HttpStatus,
   Param,
   ParseUUIDPipe,
   Patch,
-  UseFilters,
-  UseGuards,
   Post,
   Query,
+  UseFilters,
+  UseGuards,
 } from '@nestjs/common';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import {
@@ -37,10 +35,8 @@ import { UserExceptionFilter } from '../filters/user-exception.filter';
 import { JwtAuthGuard } from '../../../auth/interface/guards/jwt-auth.guard';
 import { CurrentUser } from '../../../auth/interface/decorators/current-user.decorator';
 import { RolesGuard } from '../../../auth/interface/guards/roles.guard';
-import {
-  AdminCreateUserDto,
-  UserRole,
-} from '../../applications/dto/admin-create-user.dto';
+import { AdminCreateUserDto } from '../../applications/dto/admin-create-user.dto';
+import { UserRole } from '../../domains/entities/user.entity';
 import { Roles } from '../../../auth/interface/decorators/roles.decorator';
 import { Audit } from '../../../../shared/audit/decorators/audit.decorator';
 import {
@@ -48,6 +44,7 @@ import {
   AuditCategory,
   AuditSeverity,
 } from '../../../../shared/audit/domains/enums/audit.enum';
+import { AuthenticatedUser } from '../../../auth/domains/entities/jwt-payload.entity';
 
 @ApiTags('Identity - Users')
 @ApiBearerAuth('JWT')
@@ -56,6 +53,8 @@ import {
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class UserController {
   constructor(private readonly orchestrator: UserOrchestrator) {}
+
+  // ── POST /users/admin/create ───────────────────────────────────────────────
 
   @Throttle({ dashboard: {} })
   @Audit({
@@ -70,6 +69,9 @@ export class UserController {
   @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: '(ADMIN) Membuat akun user baru (Langsung Terverifikasi)',
+    description:
+      'Endpoint khusus Admin untuk membuat akun pengguna baru yang otomatis terverifikasi.',
+    operationId: 'usersAdminCreate',
   })
   @ApiCreatedResponse({
     description: 'Akun berhasil dibuat dan otomatis terverifikasi',
@@ -81,9 +83,17 @@ export class UserController {
       },
     },
   })
-  async createByAdmin(@Body() dto: AdminCreateUserDto) {
+  @ApiBadRequestResponse({
+    description: 'Format email atau data DTO tidak valid.',
+  })
+  @ApiForbiddenResponse({ description: 'Akses ditolak. Hanya untuk Admin.' })
+  async createByAdmin(
+    @Body() dto: AdminCreateUserDto,
+  ): Promise<{ message: string; userId: string }> {
     return this.orchestrator.adminCreateUser(dto);
   }
+
+  // ── GET /users ─────────────────────────────────────────────────────────────
 
   @SkipThrottle()
   @Get()
@@ -91,24 +101,33 @@ export class UserController {
   @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: '(ADMIN) Mendapatkan daftar seluruh user dengan pagination',
+    description:
+      'Mengambil daftar seluruh pengguna dengan dukungan pencarian dan pagination.',
+    operationId: 'usersFindAll',
   })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
-  @ApiQuery({ name: 'role', required: false, type: String, example: 'ADMIN' })
+  @ApiQuery({ name: 'role', required: false, type: String, example: 'PEWARIS' })
   @ApiQuery({ name: 'search', required: false, type: String })
   @ApiOkResponse({
     description: 'Berhasil mendapatkan daftar user',
     type: PaginatedUsersResponseDto,
   })
+  @ApiForbiddenResponse({ description: 'Akses ditolak. Hanya untuk Admin.' })
   async findAll(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('role') role?: string,
     @Query('search') search?: string,
   ): Promise<PaginatedUsersResponseDto> {
+    const pageNum = page ? Math.max(1, parseInt(page, 10) || 1) : 1;
+    const limitNum = limit
+      ? Math.min(Math.max(1, parseInt(limit, 10) || 10), 50)
+      : 10;
+
     return this.orchestrator.findAll({
-      page: page ? parseInt(page, 10) : 1,
-      limit: limit ? Math.min(parseInt(limit, 10), 50) : 10,
+      page: pageNum,
+      limit: limitNum,
       role: role || undefined,
       search: search || undefined,
     });
@@ -130,8 +149,8 @@ export class UserController {
     description: 'Data profil berhasil diambil.',
   })
   @ApiUnauthorizedResponse({ description: 'Token tidak ada atau tidak valid.' })
-  getMe(@CurrentUser('sub') userId: string): Promise<UserResponseDto> {
-    return this.orchestrator.getById(userId);
+  getMe(@CurrentUser() user: AuthenticatedUser): Promise<UserResponseDto> {
+    return this.orchestrator.getById(user.sub, user);
   }
 
   // ── PATCH /users/me/avatar ─────────────────────────────────────────────────
@@ -142,11 +161,8 @@ export class UserController {
     summary: 'Perbarui foto profil',
     description:
       'Memperbarui foto profil user yang sedang login.\n\n' +
-      '**Alur pemakaian (2 langkah):**\n' +
-      '1. Upload file foto ke `POST /storage/upload` dengan `purpose: PROFILE_PHOTO`, ' +
-      'dapatkan `fileUrl` dari response-nya.\n' +
-      '2. Kirim `fileUrl` tersebut ke endpoint ini sebagai `avatarUrl`.\n\n' +
-      'Endpoint ini HANYA memperbarui referensi URL di profil — tidak menerima upload file secara langsung.',
+      '1. Upload file foto ke `POST /storage/upload` dengan `purpose: PROFILE_PHOTO`.\n' +
+      '2. Kirim `fileUrl` tersebut ke endpoint ini sebagai `avatarUrl`.',
     operationId: 'usersUpdateAvatar',
   })
   @ApiOkResponse({
@@ -156,10 +172,10 @@ export class UserController {
   @ApiUnauthorizedResponse({ description: 'Token tidak ada atau tidak valid.' })
   @ApiBadRequestResponse({ description: 'avatarUrl tidak valid / kosong.' })
   async updateAvatar(
-    @CurrentUser('sub') userId: string,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() dto: UpdateAvatarDto,
   ): Promise<UserResponseDto> {
-    return this.orchestrator.updateAvatar(userId, dto.avatarUrl);
+    return this.orchestrator.updateAvatar(user.sub, dto.avatarUrl);
   }
 
   // ── GET /users/:id ─────────────────────────────────────────────────────────
@@ -171,15 +187,14 @@ export class UserController {
     summary: 'Lihat profil berdasarkan ID',
     description:
       'Mengambil data profil user berdasarkan UUID.\n\n' +
-      '**Hanya bisa mengakses profil milik sendiri** (ID harus cocok dengan JWT).\n\n' +
-      'Untuk melihat profil sendiri lebih praktis gunakan `GET /api/v1/users/me`.',
+      'Pengguna biasa hanya boleh mengakses profil milik sendiri. Admin dapat melihat profil user mana pun.',
     operationId: 'usersGetById',
   })
   @ApiParam({
     name: 'id',
     type: 'string',
     format: 'uuid',
-    description: 'UUID user yang sama dengan userId di JWT',
+    description: 'UUID user yang dicari',
     example: '550e8400-e29b-41d4-a716-446655440000',
   })
   @ApiOkResponse({
@@ -188,35 +203,14 @@ export class UserController {
   })
   @ApiUnauthorizedResponse({ description: 'Token tidak ada atau tidak valid.' })
   @ApiForbiddenResponse({
-    description: 'Tidak boleh mengakses profil user lain.',
-    schema: {
-      example: {
-        statusCode: 403,
-        message: 'Anda tidak memiliki izin untuk mengakses profil user lain.',
-        error: 'ForbiddenException',
-      },
-    },
+    description: 'Anda tidak memiliki izin untuk mengakses profil user lain.',
   })
-  @ApiNotFoundResponse({
-    description: 'User tidak ditemukan.',
-    schema: {
-      example: {
-        statusCode: 404,
-        message: "User dengan id 'xxx' tidak ditemukan",
-        error: 'NotFoundException',
-      },
-    },
-  })
+  @ApiNotFoundResponse({ description: 'User tidak ditemukan.' })
   async getById(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
-    @CurrentUser('sub') requestingUserId: string,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<UserResponseDto> {
-    if (id !== requestingUserId) {
-      throw new ForbiddenException(
-        'Anda tidak memiliki izin untuk mengakses profil user lain.',
-      );
-    }
-    return this.orchestrator.getById(id);
+    return this.orchestrator.getById(id, user);
   }
 
   // ── PATCH /users/:id ───────────────────────────────────────────────────────
@@ -227,22 +221,14 @@ export class UserController {
     summary: 'Update profil',
     description:
       'Update nama lengkap dan/atau password.\n\n' +
-      '**Hanya bisa mengubah profil milik sendiri.**\n\n' +
-      'Untuk ganti password, wajib kirim `currentPassword` dan `newPassword` bersamaan.\n\n' +
-      '```json\n' +
-      '{\n' +
-      '  "fullName": "Nama Baru",\n' +
-      '  "currentPassword": "OldPass123",\n' +
-      '  "newPassword": "NewPass456"\n' +
-      '}\n' +
-      '```',
+      'Pengguna biasa hanya bisa mengubah profil sendiri. Admin dapat mengedit profil user mana pun.',
     operationId: 'usersUpdate',
   })
   @ApiParam({
     name: 'id',
     type: 'string',
     format: 'uuid',
-    description: 'UUID user yang sama dengan userId di JWT',
+    description: 'UUID user yang akan diubah',
     example: '550e8400-e29b-41d4-a716-446655440000',
   })
   @ApiOkResponse({
@@ -262,13 +248,8 @@ export class UserController {
   async update(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body() dto: UpdateUserDto,
-    @CurrentUser('sub') requestingUserId: string,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<UserResponseDto> {
-    if (id !== requestingUserId) {
-      throw new ForbiddenException(
-        'Anda tidak memiliki izin untuk mengubah profil user lain.',
-      );
-    }
-    return this.orchestrator.update(id, dto, requestingUserId);
+    return this.orchestrator.update(id, dto, user);
   }
 }

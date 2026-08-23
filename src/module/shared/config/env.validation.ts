@@ -65,7 +65,7 @@ class EnvironmentVariables {
 
   @IsString()
   @IsNotEmpty({ message: 'DB_DATABASE wajib diisi' })
-  DB_DATABASE: string = 'hanifa_elektronik_db';
+  DB_DATABASE: string = 'waristech_db';
 
   @IsNumber()
   @Min(1)
@@ -87,11 +87,11 @@ class EnvironmentVariables {
 
   @IsString()
   @IsNotEmpty({ message: 'JWT_ISSUER wajib diisi' })
-  JWT_ISSUER: string = 'hanifa-elektronik-backend';
+  JWT_ISSUER: string = 'waristech-backend';
 
   @IsString()
   @IsNotEmpty({ message: 'JWT_AUDIENCE wajib diisi' })
-  JWT_AUDIENCE: string = 'hanifa-elektronik-client';
+  JWT_AUDIENCE: string = 'waristech-client';
 
   // ── Storage ──────────────────────────────────────────────────
   @IsString()
@@ -125,7 +125,7 @@ class EnvironmentVariables {
 
   @IsString()
   @IsOptional()
-  EMAIL_FROM_NAME: string = 'Hanifa Elektronik';
+  EMAIL_FROM_NAME: string = 'WarisTech';
 
   // ── Throttler ────────────────────────────────────────────────
   @IsNumber()
@@ -164,7 +164,7 @@ class EnvironmentVariables {
   // ── MongoDB (Audit Trail & Compliance Logs) ────────────────
   @IsString()
   @IsOptional()
-  MONGODB_URI: string = 'mongodb://localhost:27017/hanifa_elektronik_audit';
+  MONGODB_URI: string = 'mongodb://localhost:27017/waristech_audit';
 
   @IsBoolean()
   @IsOptional()
