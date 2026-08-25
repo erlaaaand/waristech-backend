@@ -12,7 +12,7 @@ import { AssetRepository } from './infrastructures/repositories/asset.repository
 import { ASSET_REPOSITORY_TOKEN } from './domains/repositories/asset.repository.interface';
 import { EncryptionService } from './infrastructures/services/encryption.service';
 import { ENCRYPTION_SERVICE_TOKEN } from './domains/services/encryption.service.interface';
-import { MockForensicValidatorService } from './infrastructures/services/mock-forensic-validator.service';
+import { AiForensicValidatorService } from './infrastructures/services/ai-forensic-validator.service';
 import { FORENSIC_VALIDATOR_TOKEN } from './applications/services/forensic-validator.interface';
 
 // Use Cases
@@ -75,7 +75,7 @@ const USE_CASES = [
     },
     {
       provide: FORENSIC_VALIDATOR_TOKEN,
-      useClass: MockForensicValidatorService,
+      useClass: AiForensicValidatorService,
     },
 
     // ── Application Layer ──────────────────────────────────────────
