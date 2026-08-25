@@ -141,6 +141,7 @@ async function bootstrap(): Promise<void> {
     if (authHeader && authHeader.startsWith('Bearer ')) {
       return next();
     }
+
     doubleCsrfProtection(req, res, next);
   });
 
@@ -199,7 +200,7 @@ async function bootstrap(): Promise<void> {
   // 10. Graceful shutdown
   app.enableShutdownHooks();
 
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
 
   logger.log(`🚀 Aplikasi berjalan di mode: ${nodeEnv.toUpperCase()}`);
   logger.log(`🚀 Server berjalan di: http://localhost:${port}/api/v1`);
