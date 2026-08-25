@@ -12,7 +12,6 @@ export class InvitationTypeOrmEntity {
   @PrimaryColumn({ type: 'varchar', length: 36 })
   id: string = '';
 
-  @Index({ unique: true })
   @Column({ type: 'varchar', length: 30, unique: true })
   code: string = '';
 
