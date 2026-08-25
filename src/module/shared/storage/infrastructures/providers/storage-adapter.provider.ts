@@ -30,7 +30,7 @@ export const StorageAdapterProvider: Provider = {
   ): IStorageAdapter => {
     const provider = config.get<string>('STORAGE_PROVIDER', 'local');
 
-    if (provider === 's3') {
+    if (provider === 's3' || provider === 'supabase') {
       return s3Adapter;
     }
 

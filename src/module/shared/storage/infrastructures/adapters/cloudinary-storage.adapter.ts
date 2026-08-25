@@ -18,12 +18,15 @@ export class CloudinaryStorageAdapter implements IStorageAdapter {
   private readonly logger: Logger = new Logger(CloudinaryStorageAdapter.name);
 
   constructor(private readonly config: ConfigService) {
-    cloudinary.config({
-      cloud_name: this.config.getOrThrow<string>('CLOUDINARY_CLOUD_NAME'),
-      api_key: this.config.getOrThrow<string>('CLOUDINARY_API_KEY'),
-      api_secret: this.config.getOrThrow<string>('CLOUDINARY_API_SECRET'),
-    });
-    this.logger.log('[Cloudinary] Adapter diinisialisasi.');
+    const provider = this.config.get<string>('STORAGE_PROVIDER', 'local');
+    if (provider === 'cloudinary') {
+      cloudinary.config({
+        cloud_name: this.config.getOrThrow<string>('CLOUDINARY_CLOUD_NAME'),
+        api_key: this.config.getOrThrow<string>('CLOUDINARY_API_KEY'),
+        api_secret: this.config.getOrThrow<string>('CLOUDINARY_API_SECRET'),
+      });
+      this.logger.log('[Cloudinary] Adapter diinisialisasi.');
+    }
   }
 
   async upload(file: RawUploadedFile, fileKey: string): Promise<UploadResult> {

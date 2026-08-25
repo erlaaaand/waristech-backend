@@ -33,27 +33,46 @@ export class S3StorageAdapter implements IStorageAdapter {
   constructor(private readonly config: ConfigService) {
     const provider = this.config.get<string>('STORAGE_PROVIDER', 'local');
 
-    // Hanya validasi dan inisialisasi S3 jika provider diatur ke 's3'
-    if (provider === 's3') {
-      this.region = this.config.getOrThrow<string>('AWS_REGION');
-      this.bucket = this.config.getOrThrow<string>('AWS_S3_BUCKET');
-      this.cdnBaseUrl = this.config.get<string>('AWS_CLOUDFRONT_URL') ?? null;
+    // Hanya validasi dan inisialisasi S3 / Supabase jika provider diatur ke 's3' atau 'supabase'
+    if (provider === 's3' || provider === 'supabase') {
+      this.region =
+        this.config.get<string>('AWS_REGION') ??
+        this.config.get<string>('SUPABASE_S3_REGION') ??
+        'ap-southeast-1';
+      this.bucket =
+        this.config.get<string>('AWS_S3_BUCKET') ??
+        this.config.get<string>('SUPABASE_STORAGE_BUCKET') ??
+        '';
+      this.cdnBaseUrl =
+        this.config.get<string>('AWS_CLOUDFRONT_URL') ??
+        this.config.get<string>('SUPABASE_STORAGE_URL') ??
+        null;
+
+      const accessKeyId =
+        this.config.get<string>('AWS_ACCESS_KEY_ID') ??
+        this.config.get<string>('SUPABASE_S3_ACCESS_KEY_ID') ??
+        '';
+      const secretAccessKey =
+        this.config.get<string>('AWS_SECRET_ACCESS_KEY') ??
+        this.config.get<string>('SUPABASE_S3_SECRET_ACCESS_KEY') ??
+        '';
+      const endpoint =
+        this.config.get<string>('AWS_S3_ENDPOINT') ??
+        this.config.get<string>('SUPABASE_S3_ENDPOINT');
 
       const s3Config: S3ClientConfig = {
         region: this.region,
         credentials: {
-          accessKeyId: this.config.getOrThrow<string>('AWS_ACCESS_KEY_ID'),
-          secretAccessKey: this.config.getOrThrow<string>(
-            'AWS_SECRET_ACCESS_KEY',
-          ),
+          accessKeyId,
+          secretAccessKey,
         },
-        endpoint: this.config.get<string>('AWS_S3_ENDPOINT'),
+        endpoint,
         forcePathStyle: true,
       };
 
       this.client = new S3Client(s3Config);
       this.logger.log(
-        `[S3] Adapter diinisialisasi pada region: ${this.region}`,
+        `[S3/Supabase Storage] Adapter diinisialisasi pada region: ${this.region}`,
       );
     } else {
       // Fallback aman untuk strict mode jika provider = 'local'
