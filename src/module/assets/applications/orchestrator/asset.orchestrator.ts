@@ -16,6 +16,9 @@ import { CloseAssetUseCase } from '../use-cases/close-asset.use-case';
 import { AllocateAssetDto } from '../dto/allocate-asset.dto';
 import { UploadLiquidationProofDto } from '../dto/upload-liquidation-proof.dto';
 import { AssetAllocationResponseDto } from '../dto/asset-response.dto';
+import { GetPendingAssetsNotarisUseCase } from '../use-cases/get-pending-assets-notaris.use-case';
+import { GetAllocatedAssetsAhliWarisUseCase } from '../use-cases/get-allocated-assets-ahli-waris.use-case';
+import { GetHistoryAssetsNotarisUseCase } from '../use-cases/get-history-assets-notaris.use-case';
 
 @Injectable()
 export class AssetOrchestrator {
@@ -30,6 +33,9 @@ export class AssetOrchestrator {
     private readonly uploadLiquidationProofUc: UploadLiquidationProofUseCase,
     private readonly acknowledgeDistributionUc: AcknowledgeDistributionUseCase,
     private readonly closeAssetUc: CloseAssetUseCase,
+    private readonly getPendingAssetsNotarisUc: GetPendingAssetsNotarisUseCase,
+    private readonly getAllocatedAssetsAhliWarisUc: GetAllocatedAssetsAhliWarisUseCase,
+    private readonly getHistoryAssetsNotarisUc: GetHistoryAssetsNotarisUseCase,
   ) {}
 
   createAsset(
@@ -41,6 +47,18 @@ export class AssetOrchestrator {
 
   listMyAssets(pewarisId: string): Promise<AssetResponseDto[]> {
     return this.getMyAssetsUc.execute(pewarisId);
+  }
+
+  listPendingForNotaris(): Promise<AssetResponseDto[]> {
+    return this.getPendingAssetsNotarisUc.execute();
+  }
+
+  listHistoryForNotaris(): Promise<AssetResponseDto[]> {
+    return this.getHistoryAssetsNotarisUc.execute();
+  }
+
+  listAllocatedForAhliWaris(ahliWarisId: string): Promise<AssetResponseDto[]> {
+    return this.getAllocatedAssetsAhliWarisUc.execute(ahliWarisId);
   }
 
   updateAsset(

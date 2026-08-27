@@ -89,6 +89,35 @@ export class AssetRepository implements IAssetRepository {
     return entities.map((e) => this.toDomain(e));
   }
 
+  async findByStatus(status: AssetStatus): Promise<AssetDomain[]> {
+    const entities = await this.assetRepo.find({
+      where: { status },
+      relations: { allocations: true },
+      order: { createdAt: 'DESC' },
+    });
+    return entities.map((e) => this.toDomain(e));
+  }
+
+  async findByStatuses(statuses: AssetStatus[]): Promise<AssetDomain[]> {
+    const qb = this.assetRepo.createQueryBuilder('asset');
+    qb.leftJoinAndSelect('asset.allocations', 'allocations');
+    qb.where('asset.status IN (:...statuses)', { statuses });
+    qb.orderBy('asset.createdAt', 'DESC');
+
+    const entities = await qb.getMany();
+    return entities.map((e) => this.toDomain(e));
+  }
+
+  async findByAhliWarisId(ahliWarisId: string): Promise<AssetDomain[]> {
+    const qb = this.assetRepo.createQueryBuilder('asset');
+    qb.leftJoinAndSelect('asset.allocations', 'allocations');
+    qb.where('allocations.ahliWarisId = :ahliWarisId', { ahliWarisId });
+    qb.orderBy('asset.createdAt', 'DESC');
+
+    const entities = await qb.getMany();
+    return entities.map((e) => this.toDomain(e));
+  }
+
   async update(id: string, data: IUpdateAssetData): Promise<AssetDomain> {
     await this.assetRepo.update(id, { ...data });
     const updated = await this.assetRepo.findOneOrFail({

@@ -87,6 +87,53 @@ export class AssetController {
     return this.orchestrator.listMyAssets(user.sub);
   }
 
+  // ── GET /assets/notaris/pending ──────────────────────────────────────────
+
+  @SkipThrottle()
+  @Get('notaris/pending')
+  @HttpCode(HttpStatus.OK)
+  @Roles(UserRole.NOTARIS)
+  @ApiOperation({
+    summary: '(NOTARIS) Lihat Daftar Harta Warisan Menunggu Verifikasi',
+    operationId: 'assetsListPendingNotaris',
+  })
+  @ApiOkResponse({ type: [AssetResponseDto] })
+  listPendingForNotaris(): Promise<AssetResponseDto[]> {
+    return this.orchestrator.listPendingForNotaris();
+  }
+
+  // ── GET /assets/notaris/history ──────────────────────────────────────────
+
+  @SkipThrottle()
+  @Get('notaris/history')
+  @HttpCode(HttpStatus.OK)
+  @Roles(UserRole.NOTARIS)
+  @ApiOperation({
+    summary: '(NOTARIS) Lihat Riwayat Verifikasi',
+    operationId: 'assetsListHistoryNotaris',
+  })
+  @ApiOkResponse({ type: [AssetResponseDto] })
+  listHistoryForNotaris(): Promise<AssetResponseDto[]> {
+    return this.orchestrator.listHistoryForNotaris();
+  }
+
+  // ── GET /assets/ahli-waris/allocated ─────────────────────────────────────
+
+  @SkipThrottle()
+  @Get('ahli-waris/allocated')
+  @HttpCode(HttpStatus.OK)
+  @Roles(UserRole.AHLI_WARIS)
+  @ApiOperation({
+    summary: '(AHLI WARIS) Lihat Daftar Harta Warisan Dialokasikan',
+    operationId: 'assetsListAllocatedAhliWaris',
+  })
+  @ApiOkResponse({ type: [AssetResponseDto] })
+  listAllocatedForAhliWaris(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<AssetResponseDto[]> {
+    return this.orchestrator.listAllocatedForAhliWaris(user.sub);
+  }
+
   // ── PATCH /assets/:id ────────────────────────────────────────────────────
 
   @Patch(':id')

@@ -26,6 +26,9 @@ import { UnlockAssetUseCase } from './applications/use-cases/unlock-asset.use-ca
 import { UploadLiquidationProofUseCase } from './applications/use-cases/upload-liquidation-proof.use-case';
 import { AcknowledgeDistributionUseCase } from './applications/use-cases/acknowledge-distribution.use-case';
 import { CloseAssetUseCase } from './applications/use-cases/close-asset.use-case';
+import { GetPendingAssetsNotarisUseCase } from './applications/use-cases/get-pending-assets-notaris.use-case';
+import { GetAllocatedAssetsAhliWarisUseCase } from './applications/use-cases/get-allocated-assets-ahli-waris.use-case';
+import { GetHistoryAssetsNotarisUseCase } from './applications/use-cases/get-history-assets-notaris.use-case';
 
 // Orchestrator
 import { AssetOrchestrator } from './applications/orchestrator/asset.orchestrator';
@@ -51,6 +54,9 @@ const USE_CASES = [
   UploadLiquidationProofUseCase,
   AcknowledgeDistributionUseCase,
   CloseAssetUseCase,
+  GetPendingAssetsNotarisUseCase,
+  GetAllocatedAssetsAhliWarisUseCase,
+  GetHistoryAssetsNotarisUseCase,
 ];
 
 @Module({

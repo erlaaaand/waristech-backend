@@ -35,6 +35,9 @@ export interface IAssetRepository {
   create(data: ICreateAssetData): Promise<AssetDomain>;
   findById(id: string): Promise<AssetDomain | null>;
   findByPewarisId(pewarisId: string): Promise<AssetDomain[]>;
+  findByStatus(status: AssetStatus): Promise<AssetDomain[]>;
+  findByStatuses(statuses: AssetStatus[]): Promise<AssetDomain[]>;
+  findByAhliWarisId(ahliWarisId: string): Promise<AssetDomain[]>;
   update(id: string, data: IUpdateAssetData): Promise<AssetDomain>;
   verify(id: string, notarisId: string): Promise<AssetDomain>;
   reject(id: string, notarisId: string): Promise<AssetDomain>;
