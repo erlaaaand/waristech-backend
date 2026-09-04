@@ -5,10 +5,7 @@ import {
   ASSET_REPOSITORY_TOKEN,
   type IAssetRepository,
 } from '../../domains/repositories/asset.repository.interface';
-import {
-  ENCRYPTION_SERVICE_TOKEN,
-  type IEncryptionService,
-} from '../../domains/services/encryption.service.interface';
+import { BadRequestException } from '@nestjs/common';
 import {
   AssetNotFoundException,
   AssetNotOwnedException,
@@ -28,8 +25,6 @@ export class UpdateAssetUseCase {
   constructor(
     @Inject(ASSET_REPOSITORY_TOKEN)
     private readonly assetRepo: IAssetRepository,
-    @Inject(ENCRYPTION_SERVICE_TOKEN)
-    private readonly encryptionService: IEncryptionService,
     private readonly auditLogService: AuditLogService,
   ) {}
 
@@ -46,11 +41,15 @@ export class UpdateAssetUseCase {
       throw new AssetAlreadyVerifiedException();
     }
 
-    let encryptedSecret: string | undefined;
+    // Kredensial TIDAK boleh diperbarui lewat jalur ini. Menyimpannya kembali
+    // sebagai `encryptedSecret` tunggal akan mengembalikan kerentanan yang sudah
+    // ditutup (server kembali memegang kunci utuh), sekaligus membuat bagian
+    // kunci Shamir yang ada menjadi basi/tidak sinkron.
     if (dto.secret) {
-      const secretJson = JSON.stringify(dto.secret);
-      encryptedSecret = await this.encryptionService.encrypt(secretJson);
-      asset.updateSecret(encryptedSecret); // apply business rule check just in case
+      throw new BadRequestException(
+        'Kredensial tidak dapat diubah lewat endpoint ini. Gunakan POST /assets/:id/rotate-shares — ' +
+          'pemecahan ulang kunci wajib dilakukan di sisi klien agar server tidak pernah memegang kunci utuh.',
+      );
     }
 
     const updated = await this.assetRepo.update(id, {
@@ -58,7 +57,6 @@ export class UpdateAssetUseCase {
       assetName: dto.assetName,
       platform: dto.platform,
       accountIdentifier: dto.accountIdentifier,
-      encryptedSecret,
     });
 
     this.auditLogService.logAsync({
@@ -85,6 +83,7 @@ export class UpdateAssetUseCase {
       assetName: asset.assetName,
       platform: asset.platform,
       accountIdentifier: asset.accountIdentifier,
+      custodyType: asset.custodyType,
       status: asset.status,
       verifiedByNotarisId: asset.verifiedByNotarisId,
       verifiedAt: asset.verifiedAt,

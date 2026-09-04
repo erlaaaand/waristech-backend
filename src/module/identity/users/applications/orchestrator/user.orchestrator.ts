@@ -10,10 +10,13 @@ import { UpdateAvatarUseCase } from '../use-cases/update-avatar.use-case';
 import { AdminCreateUserUseCase } from '../use-cases/admin-create-user.use-case';
 import { FindAllUsersUseCase } from '../use-cases/find-all-users.use-case';
 import { AdminCreateUserDto } from '../dto/admin-create-user.dto';
+import { RegisterPublicKeyDto } from '../dto/register-public-key.dto';
+import { RegisterPublicKeyUseCase } from '../use-cases/register-public-key.use-case';
+import { GetNotarisPublicKeyUseCase } from '../use-cases/get-notaris-public-key.use-case';
 import {
   type FindAllUsersQuery,
   type PaginatedResult,
-} from '../../infrastructures/repositories/user.repository.interface';
+} from '../../domains/repositories/user.repository.interface';
 import { AuthenticatedUser } from '../../../auth/domains/entities/jwt-payload.entity';
 
 @Injectable()
@@ -26,6 +29,8 @@ export class UserOrchestrator {
     private readonly updateAvatarUc: UpdateAvatarUseCase,
     private readonly adminCreateUserUc: AdminCreateUserUseCase,
     private readonly findAllUsersUc: FindAllUsersUseCase,
+    private readonly registerPublicKeyUc: RegisterPublicKeyUseCase,
+    private readonly getNotarisPublicKeyUc: GetNotarisPublicKeyUseCase,
   ) {}
 
   getById(
@@ -61,5 +66,18 @@ export class UserOrchestrator {
     query: FindAllUsersQuery = {},
   ): Promise<PaginatedResult<UserResponseDto>> {
     return this.findAllUsersUc.execute(query);
+  }
+
+  registerPublicKey(
+    notarisId: string,
+    dto: RegisterPublicKeyDto,
+  ): Promise<{ message: string }> {
+    return this.registerPublicKeyUc.execute(notarisId, dto);
+  }
+
+  getNotarisPublicKey(
+    notarisId: string,
+  ): Promise<{ notarisId: string; fullName: string; publicKey: string }> {
+    return this.getNotarisPublicKeyUc.execute(notarisId);
   }
 }

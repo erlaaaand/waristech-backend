@@ -8,6 +8,7 @@ import {
   RelationshipType,
 } from '../../domains/entities/family-member.entity';
 import { FamilyMemberTypeOrmEntity } from '../entities/family-member.typeorm-entity';
+import { InvalidFamilyMemberStatusTransitionException } from '../../domains/exceptions/inheritance.exception';
 
 @Injectable()
 export class FamilyMemberRepository implements IFamilyMemberRepository {
@@ -64,33 +65,71 @@ export class FamilyMemberRepository implements IFamilyMemberRepository {
     return entities.map((e) => this.toDomain(e));
   }
 
+  async findByAhliWarisId(ahliWarisId: string): Promise<FamilyMemberDomain[]> {
+    const entities = await this.repo.find({
+      where: { ahliWarisId },
+      order: { createdAt: 'DESC' },
+    });
+    return entities.map((e) => this.toDomain(e));
+  }
+
   async findById(id: string): Promise<FamilyMemberDomain | null> {
     const entity = await this.repo.findOne({ where: { id } });
     return entity ? this.toDomain(entity) : null;
   }
 
-  async verify(id: string, notarisId: string): Promise<FamilyMemberDomain> {
-    await this.repo.update(id, {
-      status: FamilyMemberStatus.VERIFIED,
-      verifiedByNotarisId: notarisId,
-      verifiedAt: new Date(),
+  async findByStatus(
+    status: FamilyMemberStatus,
+  ): Promise<FamilyMemberDomain[]> {
+    const entities = await this.repo.find({
+      where: { status },
+      order: { createdAt: 'ASC' },
     });
+    return entities.map((e) => this.toDomain(e));
+  }
+
+  async verify(id: string, notarisId: string): Promise<FamilyMemberDomain> {
+    // UPDATE bersyarat — hanya berhasil dari status PENDING_VERIFICATION,
+    // menutup race klik-ganda/urutan-tidak-wajar.
+    const result = await this.repo.update(
+      { id, status: FamilyMemberStatus.PENDING_VERIFICATION },
+      {
+        status: FamilyMemberStatus.VERIFIED,
+        verifiedByNotarisId: notarisId,
+        verifiedAt: new Date(),
+      },
+    );
+    if (!result.affected) {
+      throw new InvalidFamilyMemberStatusTransitionException();
+    }
     const entity = await this.repo.findOneOrFail({ where: { id } });
     return this.toDomain(entity);
   }
 
   async reject(id: string, notarisId: string): Promise<FamilyMemberDomain> {
-    await this.repo.update(id, {
-      status: FamilyMemberStatus.REJECTED,
-      verifiedByNotarisId: notarisId,
-      verifiedAt: new Date(),
-    });
+    const result = await this.repo.update(
+      { id, status: FamilyMemberStatus.PENDING_VERIFICATION },
+      {
+        status: FamilyMemberStatus.REJECTED,
+        verifiedByNotarisId: notarisId,
+        verifiedAt: new Date(),
+      },
+    );
+    if (!result.affected) {
+      throw new InvalidFamilyMemberStatusTransitionException();
+    }
     const entity = await this.repo.findOneOrFail({ where: { id } });
     return this.toDomain(entity);
   }
 
   async confirmByPewaris(id: string): Promise<FamilyMemberDomain> {
-    await this.repo.update(id, { status: FamilyMemberStatus.VERIFIED });
+    const result = await this.repo.update(
+      { id, status: FamilyMemberStatus.PENDING_CONFIRMATION },
+      { status: FamilyMemberStatus.VERIFIED },
+    );
+    if (!result.affected) {
+      throw new InvalidFamilyMemberStatusTransitionException();
+    }
     const entity = await this.repo.findOneOrFail({ where: { id } });
     return this.toDomain(entity);
   }

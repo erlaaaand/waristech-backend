@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
+import { randomUUID } from 'crypto';
 import type {
   IAssetRepository,
   ICreateAssetData,
@@ -9,9 +10,14 @@ import type {
 } from '../../domains/repositories/asset.repository.interface';
 import { AssetDomain } from '../../domains/entities/asset.entity';
 import { AssetAllocationDomain } from '../../domains/entities/asset-allocation.entity';
-import { AssetStatus } from '../../domains/enums/asset.enum';
+import { AssetStatus, AssetCustodyType } from '../../domains/enums/asset.enum';
 import { AssetTypeOrmEntity } from '../entities/asset.typeorm-entity';
 import { AssetAllocationTypeOrmEntity } from '../entities/asset-allocation.typeorm-entity';
+import {
+  AssetAlreadyVerifiedException,
+  AssetNotFoundException,
+  InvalidAssetStatusTransitionException,
+} from '../../domains/exceptions/asset.exception';
 
 @Injectable()
 export class AssetRepository implements IAssetRepository {
@@ -48,9 +54,12 @@ export class AssetRepository implements IAssetRepository {
       entity.platform,
       entity.accountIdentifier,
       entity.encryptedSecret,
+      entity.custodyType,
       entity.status,
       entity.verifiedByNotarisId,
       entity.verifiedAt,
+      entity.cooldownEndsAt,
+      entity.keysRotatedAt,
       allocations,
       entity.createdAt,
       entity.updatedAt,
@@ -65,7 +74,8 @@ export class AssetRepository implements IAssetRepository {
       assetName: data.assetName,
       platform: data.platform,
       accountIdentifier: data.accountIdentifier,
-      encryptedSecret: data.encryptedSecret,
+      custodyType: data.custodyType,
+      encryptedSecret: data.encryptedSecret ?? '',
       status: AssetStatus.PENDING_VERIFICATION,
     });
     const saved = await this.assetRepo.save(entity);
@@ -128,11 +138,22 @@ export class AssetRepository implements IAssetRepository {
   }
 
   async verify(id: string, notarisId: string): Promise<AssetDomain> {
-    await this.assetRepo.update(id, {
-      status: AssetStatus.VERIFIED,
-      verifiedByNotarisId: notarisId,
-      verifiedAt: new Date(),
-    });
+    // UPDATE bersyarat (WHERE status = PENDING_VERIFICATION) — mencegah aset
+    // yang sudah pindah status (klik ganda, tab basi, atau request lain yang
+    // menang race) diam-diam ditarik kembali ke VERIFIED.
+    const result = await this.assetRepo.update(
+      { id, status: AssetStatus.PENDING_VERIFICATION },
+      {
+        status: AssetStatus.VERIFIED,
+        verifiedByNotarisId: notarisId,
+        verifiedAt: new Date(),
+      },
+    );
+    if (!result.affected) {
+      throw new InvalidAssetStatusTransitionException(
+        'Aset ini sudah tidak berstatus menunggu verifikasi (mungkin sudah diproses oleh permintaan lain).',
+      );
+    }
     const updated = await this.assetRepo.findOneOrFail({
       where: { id },
       relations: { allocations: true },
@@ -141,11 +162,19 @@ export class AssetRepository implements IAssetRepository {
   }
 
   async reject(id: string, notarisId: string): Promise<AssetDomain> {
-    await this.assetRepo.update(id, {
-      status: AssetStatus.REJECTED,
-      verifiedByNotarisId: notarisId,
-      verifiedAt: new Date(),
-    });
+    const result = await this.assetRepo.update(
+      { id, status: AssetStatus.PENDING_VERIFICATION },
+      {
+        status: AssetStatus.REJECTED,
+        verifiedByNotarisId: notarisId,
+        verifiedAt: new Date(),
+      },
+    );
+    if (!result.affected) {
+      throw new InvalidAssetStatusTransitionException(
+        'Aset ini sudah tidak berstatus menunggu verifikasi (mungkin sudah diproses oleh permintaan lain).',
+      );
+    }
     const updated = await this.assetRepo.findOneOrFail({
       where: { id },
       relations: { allocations: true },
@@ -157,13 +186,36 @@ export class AssetRepository implements IAssetRepository {
     await this.assetRepo.delete(id);
   }
 
+  async closeAndShred(id: string): Promise<AssetDomain> {
+    const result = await this.assetRepo.update(
+      {
+        id,
+        status: In([AssetStatus.DISTRIBUTED, AssetStatus.DISPUTED_LIQUIDATION]),
+      },
+      { status: AssetStatus.CLOSED, encryptedSecret: '' },
+    );
+    if (!result.affected) {
+      throw new InvalidAssetStatusTransitionException(
+        'Kasus ini sudah tidak berstatus DISTRIBUTED/DISPUTED_LIQUIDATION (mungkin sudah ditutup oleh permintaan lain).',
+      );
+    }
+    const updated = await this.assetRepo.findOneOrFail({
+      where: { id },
+      relations: { allocations: true },
+    });
+    return this.toDomain(updated);
+  }
+
   // ── Allocations ──────────────────────────────────────────────────────────
 
   async upsertAllocation(
     data: IUpsertAllocationData,
   ): Promise<AssetAllocationDomain> {
+    // Cari berdasarkan (assetId, ahliWarisId) — BUKAN `id` (yang selalu baru
+    // di-generate pemanggil) — supaya alokasi ulang untuk ahli waris yang
+    // sama MENGOREKSI baris yang sudah ada, bukan menumpuk baris duplikat.
     let entity = await this.allocationRepo.findOne({
-      where: { id: data.id },
+      where: { assetId: data.assetId, ahliWarisId: data.ahliWarisId },
     });
 
     if (entity) {
@@ -181,6 +233,69 @@ export class AssetRepository implements IAssetRepository {
 
     const saved = await this.allocationRepo.save(entity);
     return this.toAllocationDomain(saved);
+  }
+
+  async allocateAtomic(
+    assetId: string,
+    ahliWarisId: string,
+    percentage: number,
+    isExecutor: boolean,
+  ): Promise<AssetAllocationDomain> {
+    // Seluruh baca-validasi-tulis dilakukan dalam SATU transaksi dengan row
+    // lock (`FOR UPDATE`) pada baris aset — menutup race condition saat dua
+    // request alokasi untuk aset yang sama masuk hampir bersamaan.
+    return this.assetRepo.manager.transaction(async (manager) => {
+      const assetEntity = await manager.findOne(AssetTypeOrmEntity, {
+        where: { id: assetId },
+        relations: { allocations: true },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!assetEntity) {
+        throw new AssetNotFoundException();
+      }
+
+      const assetDomain = this.toDomain(assetEntity);
+      if (assetDomain.isVerified()) {
+        throw new AssetAlreadyVerifiedException(
+          'Aset yang sudah diverifikasi tidak dapat diubah alokasinya.',
+        );
+      }
+      // Validasi ulang di dalam lock — sisa kapasitas yang dibaca sebelum
+      // masuk transaksi bisa saja sudah basi.
+      assetDomain.validateNewAllocation(percentage, ahliWarisId);
+
+      if (isExecutor) {
+        const hasOtherExecutor = assetEntity.allocations.some(
+          (a) => a.isExecutor && a.ahliWarisId !== ahliWarisId,
+        );
+        if (hasOtherExecutor) {
+          throw new AssetAlreadyVerifiedException(
+            'Aset ini sudah memiliki Eksekutor. Hapus penunjukan sebelumnya terlebih dahulu.',
+          );
+        }
+      }
+
+      const allocationRepo = manager.getRepository(
+        AssetAllocationTypeOrmEntity,
+      );
+      let entity = await allocationRepo.findOne({
+        where: { assetId, ahliWarisId },
+      });
+      if (entity) {
+        entity.percentage = percentage;
+        entity.isExecutor = isExecutor;
+      } else {
+        entity = allocationRepo.create({
+          id: randomUUID(),
+          assetId,
+          ahliWarisId,
+          percentage,
+          isExecutor,
+        });
+      }
+      const saved = await allocationRepo.save(entity);
+      return this.toAllocationDomain(saved);
+    });
   }
 
   async deleteAllocation(allocationId: string): Promise<void> {
@@ -205,11 +320,21 @@ export class AssetRepository implements IAssetRepository {
 
   // ── Scheduler & Background Tasks ──────────────────────────────────────────
 
+  /**
+   * Aset VAULT terverifikasi yang bagian kuncinya belum pernah dirotasi sejak
+   * `threshold`. Basisnya `keysRotatedAt` — BUKAN `updatedAt` — karena rotasi
+   * hanya menyentuh tabel asset_key_shares, sehingga updatedAt tidak berubah
+   * dan pengingat akan terkirim berulang selamanya.
+   */
   async findStaleAssets(threshold: Date): Promise<AssetDomain[]> {
     const qb = this.assetRepo.createQueryBuilder('asset');
     qb.leftJoinAndSelect('asset.allocations', 'allocations');
     qb.where('asset.status = :status', { status: AssetStatus.VERIFIED });
-    qb.andWhere('asset.updatedAt < :threshold', { threshold });
+    qb.andWhere('asset.custodyType = :custody', {
+      custody: AssetCustodyType.VAULT,
+    });
+    qb.andWhere('asset.keysRotatedAt IS NOT NULL');
+    qb.andWhere('asset.keysRotatedAt < :threshold', { threshold });
 
     const entities = await qb.getMany();
     return entities.map((e) => this.toDomain(e));
@@ -222,6 +347,27 @@ export class AssetRepository implements IAssetRepository {
       statuses: [AssetStatus.UNLOCKED, AssetStatus.LIQUIDATING],
     });
     qb.andWhere('asset.updatedAt < :threshold', { threshold });
+
+    const entities = await qb.getMany();
+    return entities.map((e) => this.toDomain(e));
+  }
+
+  async findExpiredCooldowns(now: Date): Promise<AssetDomain[]> {
+    const qb = this.assetRepo.createQueryBuilder('asset');
+    qb.leftJoinAndSelect('asset.allocations', 'allocations');
+    qb.where('asset.status = :status', {
+      status: AssetStatus.PENDING_COOLDOWN,
+    });
+    qb.andWhere('asset.cooldownEndsAt <= :now', { now });
+
+    const entities = await qb.getMany();
+    return entities.map((e) => this.toDomain(e));
+  }
+
+  async findAllWithLegacySecret(): Promise<AssetDomain[]> {
+    const qb = this.assetRepo.createQueryBuilder('asset');
+    qb.leftJoinAndSelect('asset.allocations', 'allocations');
+    qb.where("asset.encryptedSecret != ''");
 
     const entities = await qb.getMany();
     return entities.map((e) => this.toDomain(e));

@@ -1,6 +1,6 @@
 // src/auth/domains/mappers/auth.mapper.ts
 import { Injectable } from '@nestjs/common';
-import { UserEntity } from '../../../users/domains/entities/user.entity';
+import { UserDomain } from '../../../users/domains/entities/user.entity';
 import {
   AuthResponseDto,
   AuthUserDto,
@@ -9,7 +9,7 @@ import { JwtPayload } from '../entities/jwt-payload.entity';
 
 @Injectable()
 export class AuthMapper {
-  toJwtPayload(user: UserEntity): JwtPayload {
+  toJwtPayload(user: UserDomain): JwtPayload {
     return {
       sub: user.id,
       email: user.email,
@@ -17,7 +17,7 @@ export class AuthMapper {
     };
   }
 
-  toAuthUserDto(user: UserEntity): AuthUserDto {
+  toAuthUserDto(user: UserDomain): AuthUserDto {
     return {
       id: user.id,
       email: user.email,
@@ -29,7 +29,7 @@ export class AuthMapper {
   toAuthResponseDto(
     accessToken: string,
     expiresIn: string,
-    user: UserEntity,
+    user: UserDomain,
   ): AuthResponseDto {
     return {
       accessToken,

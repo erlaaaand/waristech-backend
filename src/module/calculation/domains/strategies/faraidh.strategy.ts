@@ -16,6 +16,15 @@ interface ParsedMember extends CalculationFamilyMemberInput {
     | 'LAINNYA';
 }
 
+interface FardShare {
+  member: ParsedMember;
+  portion: number; // Fraksi dari total harta (0-1), sebelum penyesuaian Aul/Radd.
+  ratioStr: string;
+}
+
+// Toleransi pembulatan floating-point saat membandingkan total porsi dengan 1 (100%).
+const EPSILON = 1e-9;
+
 @Injectable()
 export class FaraidhStrategy implements ICalculationStrategy {
   calculate(
@@ -55,89 +64,142 @@ export class FaraidhStrategy implements ICalculationStrategy {
     const anakPerempuanCount = parsedMembers.filter(
       (m) => m.role === 'ANAK_PEREMPUAN',
     ).length;
+    const istriMembers = parsedMembers.filter((m) => m.role === 'ISTRI');
+    const hasSuami = parsedMembers.some((m) => m.role === 'SUAMI');
+    const hasAyah = parsedMembers.some((m) => m.role === 'AYAH');
 
-    let remainingAsset = baseUnit;
-    const shares: ShareDetailDomain[] = [];
+    // Umariyatain/Gharrawain: pasangan (suami/istri) + Ayah + Ibu, TANPA anak.
+    // Bagian Ibu menjadi 1/3 dari SISA harta setelah bagian pasangan diambil,
+    // bukan 1/3 dari total harta seperti kasus umum.
+    const isUmariyatain =
+      !hasAnak && hasAyah && (hasSuami || istriMembers.length > 0);
+
+    const fardShares: FardShare[] = [];
     const asabahMembers: ParsedMember[] = [];
 
-    // 2. Hitung Ashabul Furudh (Yang bagiannya sudah pasti di Al-Quran)
+    // 2. Kumpulkan Ashabul Furudh (bagian pasti) sebagai FRAKSI dulu (belum
+    // dikonversi ke nominal) — supaya total-nya bisa diperiksa & disesuaikan
+    // (Aul) sebelum benar-benar dibagikan.
     for (const member of parsedMembers) {
-      let portion = 0;
-      let ratioStr = '';
-
       switch (member.role) {
-        case 'SUAMI':
-          portion = hasAnak ? 1 / 4 : 1 / 2;
-          ratioStr = hasAnak ? '1/4 (Ada Anak)' : '1/2 (Tanpa Anak)';
+        case 'SUAMI': {
+          const portion = hasAnak ? 1 / 4 : 1 / 2;
+          fardShares.push({
+            member,
+            portion,
+            ratioStr: hasAnak ? '1/4 (Ada Anak)' : '1/2 (Tanpa Anak)',
+          });
           break;
-        case 'ISTRI':
-          // Jika istri lebih dari 1, bagian 1/8 atau 1/4 dibagi rata ke semua istri.
-          // Di sini diasumsikan porsi tunggal per entitas istri untuk penyederhanaan kompetisi.
-          portion = hasAnak ? 1 / 8 : 1 / 4;
-          ratioStr = hasAnak ? '1/8 (Ada Anak)' : '1/4 (Tanpa Anak)';
+        }
+        case 'ISTRI': {
+          // Bagian 1/8 (ada anak) atau 1/4 (tanpa anak) adalah bagian GABUNGAN
+          // seluruh istri, dibagi rata ke tiap istri — bukan porsi penuh per istri.
+          const pooled = hasAnak ? 1 / 8 : 1 / 4;
+          const portion = pooled / istriMembers.length;
+          fardShares.push({
+            member,
+            portion,
+            ratioStr:
+              istriMembers.length > 1
+                ? `${hasAnak ? '1/8' : '1/4'} dibagi rata ${istriMembers.length} istri`
+                : hasAnak
+                  ? '1/8 (Ada Anak)'
+                  : '1/4 (Tanpa Anak)',
+          });
           break;
-        case 'AYAH':
-          portion = 1 / 6;
-          ratioStr = '1/6';
-          if (!hasAnakLaki) asabahMembers.push(member); // Ayah juga bisa jadi asabah jika tidak ada anak laki
+        }
+        case 'AYAH': {
+          if (!hasAnak) {
+            // Tanpa anak sama sekali: Ayah murni Asabah (mengambil sisa harta),
+            // tidak punya jatah pasti terpisah.
+            asabahMembers.push(member);
+            break;
+          }
+          fardShares.push({ member, portion: 1 / 6, ratioStr: '1/6' });
+          // Ada anak perempuan tapi tidak ada anak laki: selain 1/6 di atas,
+          // Ayah JUGA menjadi Asabah Ma'al Ghair atas sisa harta.
+          if (!hasAnakLaki) asabahMembers.push(member);
           break;
-        case 'IBU':
-          portion = hasAnak ? 1 / 6 : 1 / 3; // Mengabaikan aturan Umariyatain untuk kompleksitas dasar
-          ratioStr = hasAnak ? '1/6 (Ada Anak)' : '1/3 (Tanpa Anak)';
+        }
+        case 'IBU': {
+          let portion: number;
+          let ratioStr: string;
+          if (isUmariyatain) {
+            const spousePortion = hasSuami ? 1 / 2 : 1 / 4;
+            portion = (1 - spousePortion) / 3;
+            ratioStr = '1/3 dari sisa setelah bagian pasangan (Umariyatain)';
+          } else {
+            portion = hasAnak ? 1 / 6 : 1 / 3;
+            ratioStr = hasAnak ? '1/6 (Ada Anak)' : '1/3 (Tanpa Anak)';
+          }
+          fardShares.push({ member, portion, ratioStr });
           break;
-        case 'ANAK_PEREMPUAN':
+        }
+        case 'ANAK_PEREMPUAN': {
           if (!hasAnakLaki) {
             if (anakPerempuanCount === 1) {
-              portion = 1 / 2;
-              ratioStr = '1/2 (Anak Perempuan Tunggal)';
+              fardShares.push({
+                member,
+                portion: 1 / 2,
+                ratioStr: '1/2 (Anak Perempuan Tunggal)',
+              });
             } else {
-              portion = 2 / 3 / anakPerempuanCount;
-              ratioStr = `2/3 dibagi ${anakPerempuanCount}`;
+              fardShares.push({
+                member,
+                portion: 2 / 3 / anakPerempuanCount,
+                ratioStr: `2/3 dibagi ${anakPerempuanCount}`,
+              });
             }
           } else {
-            // Jika ada anak laki, anak perempuan menjadi Asabah Bil Ghair (Rasio Laki 2 : Pr 1)
+            // Ada anak laki-laki: anak perempuan jadi Asabah Bil Ghair (Laki:Pr = 2:1)
             asabahMembers.push(member);
-            continue;
           }
           break;
+        }
         case 'ANAK_LAKI':
-          // Anak Laki-Laki selalu Asabah (Mengambil sisa harta)
+          // Anak Laki-Laki selalu Asabah (mengambil sisa harta)
           asabahMembers.push(member);
-          continue;
+          break;
         default:
-          // Keluarga jauh (Dhawul Arham) terhijab jika ada ahli waris utama
+          // Keluarga jauh (Dhawul Arham) — hanya relevan bila tidak ada
+          // ahli waris utama; disederhanakan sebagai penerima sisa harta.
           asabahMembers.push(member);
-          continue;
-      }
-
-      if (portion > 0) {
-        const amount = baseUnit * portion;
-        remainingAsset -= amount;
-        shares.push(
-          new ShareDetailDomain(
-            member.ahliWarisId,
-            member.relationshipDescription,
-            `Faraidh Ashabul Furudh (${ratioStr})`,
-            amount,
-          ),
-        );
+          break;
       }
     }
 
-    // 3. Hitung Asabah (Penerima Sisa Harta)
-    if (remainingAsset > 0 && asabahMembers.length > 0) {
-      // Hitung total poin Asabah (Anak Laki = 2 poin, Anak Pr = 1 poin, Lainnya dibagi rata sisa)
-      let totalAsabahPoints = 0;
+    // 3. Aul: bila total bagian pasti MELEBIHI 100% (mis. banyak istri + banyak
+    // anak perempuan + orang tua, tanpa anak laki yang menyerap kelebihan),
+    // seluruh bagian pasti dikurangi proporsional agar totalnya tepat 100%.
+    const totalFardPortion = fardShares.reduce((sum, f) => sum + f.portion, 0);
+    const isAul = totalFardPortion > 1 + EPSILON;
+    const aulFactor = isAul ? 1 / totalFardPortion : 1;
 
+    const shares: ShareDetailDomain[] = fardShares.map(
+      (f) =>
+        new ShareDetailDomain(
+          f.member.ahliWarisId,
+          f.member.relationshipDescription,
+          isAul
+            ? `Faraidh Ashabul Furudh (${f.ratioStr}) [Disesuaikan Aul]`
+            : `Faraidh Ashabul Furudh (${f.ratioStr})`,
+          baseUnit * f.portion * aulFactor,
+        ),
+    );
+
+    // Saat Aul terjadi, seluruh harta sudah habis terbagi proporsional —
+    // tidak ada sisa untuk Asabah/Radd.
+    const remainingAsset = isAul ? 0 : baseUnit * (1 - totalFardPortion);
+
+    // 4. Asabah (penerima sisa harta), hanya relevan bila TIDAK sedang Aul.
+    if (remainingAsset > EPSILON && asabahMembers.length > 0) {
+      let totalAsabahPoints = 0;
       const asabahWithPoints = asabahMembers.map((m) => {
-        let points = 1;
-        if (m.role === 'ANAK_LAKI') points = 2;
-        else if (m.role === 'ANAK_PEREMPUAN') points = 1;
+        const points = m.role === 'ANAK_LAKI' ? 2 : 1;
         totalAsabahPoints += points;
         return { ...m, points };
       });
 
-      // Jika hanya ada ahli waris jauh (Lainnya), mereka mewarisi sisa secara merata
       const pointValue = remainingAsset / totalAsabahPoints;
 
       for (const member of asabahWithPoints) {
@@ -158,9 +220,37 @@ export class FaraidhStrategy implements ICalculationStrategy {
           ),
         );
       }
-    } else if (remainingAsset > 0 && asabahMembers.length === 0) {
-      // Rad (Pengembalian sisa harta ke Ashabul Furudh selain suami/istri).
-      // Untuk MVP, sisa harta akan dibiarkan/dialokasikan ke Baitul Mal (State)
+    } else if (remainingAsset > EPSILON && asabahMembers.length === 0) {
+      // 5. Radd: tidak ada Asabah — sisa harta dikembalikan secara proporsional
+      // ke Ashabul Furudh SELAIN pasangan (suami/istri tidak ikut Radd menurut
+      // jumhur ulama). Bila SATU-SATUNYA ahli waris yang ada adalah pasangan
+      // (tidak ada kerabat darah lain), sisa diberikan penuh kepadanya —
+      // penyederhanaan agar tidak ada bagian harta yang "hilang" tak terbagi.
+      const nonSpouseFard = fardShares.filter(
+        (f) => f.member.role !== 'SUAMI' && f.member.role !== 'ISTRI',
+      );
+      const raddPool = nonSpouseFard.length > 0 ? nonSpouseFard : fardShares;
+      const raddPoolPortionTotal = raddPool.reduce(
+        (sum, f) => sum + f.portion,
+        0,
+      );
+
+      for (const f of raddPool) {
+        const raddShare =
+          raddPoolPortionTotal > 0
+            ? (remainingAsset * f.portion) / raddPoolPortionTotal
+            : remainingAsset / raddPool.length;
+
+        const existingIndex = shares.findIndex(
+          (s) => s.ahliWarisId === f.member.ahliWarisId,
+        );
+        shares[existingIndex] = new ShareDetailDomain(
+          f.member.ahliWarisId,
+          f.member.relationshipDescription,
+          `${shares[existingIndex].ratio} + Radd`,
+          shares[existingIndex].calculatedPercentage + raddShare,
+        );
+      }
     }
 
     return shares;

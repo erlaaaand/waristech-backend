@@ -20,13 +20,13 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiParam,
-  ApiQuery,
   ApiTags,
   ApiUnauthorizedResponse,
   ApiBadRequestResponse,
   ApiCreatedResponse,
 } from '@nestjs/swagger';
 import { UserOrchestrator } from '../../applications/orchestrator/user.orchestrator';
+import { FindUsersQueryDto } from '../../applications/dto/find-users-query.dto';
 import { UpdateUserDto } from '../../applications/dto/update-user.dto';
 import { UpdateAvatarDto } from '../../applications/dto/update-avatar.dto';
 import { UserResponseDto } from '../../applications/dto/user-response.dto';
@@ -36,6 +36,7 @@ import { JwtAuthGuard } from '../../../auth/interface/guards/jwt-auth.guard';
 import { CurrentUser } from '../../../auth/interface/decorators/current-user.decorator';
 import { RolesGuard } from '../../../auth/interface/guards/roles.guard';
 import { AdminCreateUserDto } from '../../applications/dto/admin-create-user.dto';
+import { RegisterPublicKeyDto } from '../../applications/dto/register-public-key.dto';
 import { UserRole } from '../../domains/entities/user.entity';
 import { Roles } from '../../../auth/interface/decorators/roles.decorator';
 import { Audit } from '../../../../shared/audit/decorators/audit.decorator';
@@ -105,32 +106,15 @@ export class UserController {
       'Mengambil daftar seluruh pengguna dengan dukungan pencarian dan pagination.',
     operationId: 'usersFindAll',
   })
-  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
-  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
-  @ApiQuery({ name: 'role', required: false, type: String, example: 'PEWARIS' })
-  @ApiQuery({ name: 'search', required: false, type: String })
   @ApiOkResponse({
     description: 'Berhasil mendapatkan daftar user',
     type: PaginatedUsersResponseDto,
   })
   @ApiForbiddenResponse({ description: 'Akses ditolak. Hanya untuk Admin.' })
   async findAll(
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-    @Query('role') role?: string,
-    @Query('search') search?: string,
+    @Query() query: FindUsersQueryDto,
   ): Promise<PaginatedUsersResponseDto> {
-    const pageNum = page ? Math.max(1, parseInt(page, 10) || 1) : 1;
-    const limitNum = limit
-      ? Math.min(Math.max(1, parseInt(limit, 10) || 10), 50)
-      : 10;
-
-    return this.orchestrator.findAll({
-      page: pageNum,
-      limit: limitNum,
-      role: role || undefined,
-      search: search || undefined,
-    });
+    return this.orchestrator.findAll(query);
   }
 
   // ── GET /users/me ──────────────────────────────────────────────────────────
@@ -176,6 +160,52 @@ export class UserController {
     @Body() dto: UpdateAvatarDto,
   ): Promise<UserResponseDto> {
     return this.orchestrator.updateAvatar(user.sub, dto.avatarUrl);
+  }
+
+  // ── POST /users/me/public-key ──────────────────────────────────────────────
+
+  @Post('me/public-key')
+  @HttpCode(HttpStatus.OK)
+  @Roles(UserRole.NOTARIS)
+  @ApiOperation({
+    summary: '(NOTARIS) Daftarkan public key untuk penitipan bagian kunci',
+    description:
+      'Notaris membuat keypair di sisi klien lalu mendaftarkan public key-nya di sini. ' +
+      'Bagian kunci aset yang dititipkan kepada Notaris akan dienkripsi dengan kunci ini, ' +
+      'sehingga server menyimpan ciphertext yang tidak dapat ia buka sendiri.\n\n' +
+      '**Private key WAJIB tetap di perangkat Notaris — jangan pernah dikirim ke server.**',
+    operationId: 'usersRegisterPublicKey',
+  })
+  @ApiOkResponse({ description: 'Public key berhasil didaftarkan.' })
+  @ApiBadRequestResponse({ description: 'Format public key tidak valid.' })
+  async registerPublicKey(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: RegisterPublicKeyDto,
+  ): Promise<{ message: string }> {
+    return this.orchestrator.registerPublicKey(user.sub, dto);
+  }
+
+  // ── GET /users/notaris/:id/public-key ──────────────────────────────────────
+
+  @SkipThrottle()
+  @Get('notaris/:id/public-key')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Ambil public key Notaris',
+    description:
+      'Dipakai klien Pewaris untuk mengenkripsi bagian kunci milik Notaris sebelum dititipkan ' +
+      'via POST /assets/:id/notaris-share.',
+    operationId: 'usersGetNotarisPublicKey',
+  })
+  @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
+  @ApiOkResponse({ description: 'Public key Notaris berhasil diambil.' })
+  @ApiNotFoundResponse({
+    description: 'Notaris tidak ditemukan atau belum mendaftarkan public key.',
+  })
+  async getNotarisPublicKey(
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ): Promise<{ notarisId: string; fullName: string; publicKey: string }> {
+    return this.orchestrator.getNotarisPublicKey(id);
   }
 
   // ── GET /users/:id ─────────────────────────────────────────────────────────

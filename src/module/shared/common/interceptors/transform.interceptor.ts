@@ -27,6 +27,14 @@ export class TransformInterceptor<T> implements NestInterceptor<
 
     return next.handle().pipe(
       map((data: unknown) => {
+        // 204 No Content secara semantik TIDAK boleh punya response body —
+        // membungkusnya jadi JSON melanggar spesifikasi HTTP meski sebagian
+        // besar klien tetap mentolerirnya.
+        const HTTP_NO_CONTENT = 204;
+        if (response.statusCode === HTTP_NO_CONTENT) {
+          return undefined as unknown as Response<T>;
+        }
+
         const isObject = data !== null && typeof data === 'object';
         const msg =
           isObject && 'message' in data

@@ -5,7 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { join } from 'path';
 
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { StoredFileEntity } from './domains/entities/stored-file.entity';
+import { StoredFileTypeOrmEntity } from './infrastructures/entities/stored-file.typeorm-entity';
 
 // Adapters
 import { LocalStorageAdapter } from './infrastructures/adapters/local-storage.adapter';
@@ -16,7 +16,7 @@ import { STORAGE_ADAPTER_TOKEN } from './infrastructures/adapters/storage.adapte
 
 // Repository
 import { StoredFileRepository } from './infrastructures/repositories/stored-file.repository';
-import { STORED_FILE_REPOSITORY_TOKEN } from './infrastructures/repositories/stored-file.repository.interface';
+import { STORED_FILE_REPOSITORY_TOKEN } from './domains/repositories/stored-file.repository.interface';
 
 // Domain
 import { StorageDomainService } from './domains/services/storage-domain.service';
@@ -43,7 +43,7 @@ import { AuthModule } from '../../identity/auth/auth.module';
 @Module({
   imports: [
     AuthModule,
-    TypeOrmModule.forFeature([StoredFileEntity]),
+    TypeOrmModule.forFeature([StoredFileTypeOrmEntity]),
 
     ServeStaticModule.forRootAsync({
       imports: [ConfigModule],

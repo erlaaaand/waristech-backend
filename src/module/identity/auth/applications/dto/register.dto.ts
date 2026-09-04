@@ -2,6 +2,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
+  Equals,
+  IsBoolean,
   IsEmail,
   IsNotEmpty,
   IsString,
@@ -74,4 +76,19 @@ export class RegisterDto {
   @IsNotEmpty({ message: 'Nomor telepon wajib diisi' })
   @MaxLength(20)
   phoneNumber: string = '';
+
+  // ── Persetujuan Pemrosesan Data Pribadi (UU PDP No. 27/2022) ──
+
+  @ApiProperty({
+    description:
+      'Persetujuan eksplisit pemrosesan data pribadi spesifik (data keuangan & kredensial) ' +
+      'sesuai UU No. 27 Tahun 2022 tentang Pelindungan Data Pribadi. Wajib bernilai `true`.',
+    example: true,
+  })
+  @IsBoolean({ message: 'Persetujuan harus berupa boolean' })
+  @Equals(true, {
+    message:
+      'Anda wajib menyetujui pemrosesan data pribadi untuk dapat mendaftar (UU PDP No. 27/2022).',
+  })
+  consentAgreed: boolean = false;
 }

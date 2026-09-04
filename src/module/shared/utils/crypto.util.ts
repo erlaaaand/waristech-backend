@@ -21,4 +21,12 @@ export class CryptoUtil {
   static generateUUID(): string {
     return crypto.randomUUID();
   }
+
+  /** Perbandingan string tahan timing attack (misal kode OTP); aman untuk panjang berbeda. */
+  static timingSafeEquals(a: string, b: string): boolean {
+    const bufA = Buffer.from(a, 'utf8');
+    const bufB = Buffer.from(b, 'utf8');
+    if (bufA.length !== bufB.length) return false;
+    return crypto.timingSafeEqual(bufA, bufB);
+  }
 }

@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { IWitnessRepository } from './witness.repository.interface';
+import {
+  IWitnessRepository,
+  type ICreateWitnessData,
+} from '../../domains/repositories/witness.repository.interface';
 import { WitnessTypeOrmEntity } from '../entities/witness.typeorm-entity';
 import { WitnessStatus } from '../../domains/enums/witness.enum';
 
@@ -11,6 +14,11 @@ export class WitnessRepository implements IWitnessRepository {
     @InjectRepository(WitnessTypeOrmEntity)
     private readonly repo: Repository<WitnessTypeOrmEntity>,
   ) {}
+
+  async create(data: ICreateWitnessData): Promise<WitnessTypeOrmEntity> {
+    const entity = this.repo.create(data);
+    return this.repo.save(entity);
+  }
 
   async findById(id: string): Promise<WitnessTypeOrmEntity | null> {
     return this.repo.findOne({ where: { id } });
@@ -28,7 +36,14 @@ export class WitnessRepository implements IWitnessRepository {
     return this.repo.save(witness);
   }
 
-  async updateStatus(id: string, status: WitnessStatus): Promise<void> {
-    await this.repo.update(id, { status });
+  async updateStatusIfPending(
+    id: string,
+    status: WitnessStatus,
+  ): Promise<boolean> {
+    const result = await this.repo.update(
+      { id, status: WitnessStatus.PENDING },
+      { status },
+    );
+    return !!result.affected;
   }
 }

@@ -6,9 +6,15 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryColumn,
+  Unique,
 } from 'typeorm';
 import { AssetTypeOrmEntity } from './asset.typeorm-entity';
 
+// Satu ahli waris hanya boleh punya SATU baris alokasi per aset — memastikan
+// alokasi ulang (koreksi persentase/eksekutor) mengoreksi baris yang ada,
+// bukan menumpuk baris duplikat, dan menjadi jaring pengaman terakhir
+// terhadap race condition di level aplikasi.
+@Unique(['assetId', 'ahliWarisId'])
 @Entity({ name: 'asset_allocations' })
 export class AssetAllocationTypeOrmEntity {
   @PrimaryColumn({ type: 'varchar', length: 36 })

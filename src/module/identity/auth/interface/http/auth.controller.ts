@@ -22,6 +22,7 @@ import {
   ApiUnauthorizedResponse,
   ApiBadRequestResponse,
   ApiConflictResponse,
+  ApiUnprocessableEntityResponse,
   ApiBody,
 } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
@@ -30,7 +31,7 @@ import { LoginDto } from '../../applications/dto/login.dto';
 
 import { RegisterPewarisDto } from '../../applications/dto/register-pewaris.dto';
 import { RegisterAhliWarisDto } from '../../applications/dto/register-ahli-waris.dto';
-import { AuthResponseDto } from '../../applications/dto/auth-response.dto';
+import { AuthSessionResponseDto } from '../../applications/dto/auth-response.dto';
 import { VerifyEmailDto } from '../../applications/dto/verify-email.dto';
 import { ForgotPasswordDto } from '../../applications/dto/forgot-password.dto';
 import { ResetPasswordDto } from '../../applications/dto/reset-password.dto';
@@ -93,14 +94,39 @@ export class AuthController {
     description:
       'Membuat akun Pewaris baru dengan menyertakan NIK 16 digit.\n\n' +
       'Sistem secara otomatis menetapkan peran sebagai `PEWARIS`.\n\n' +
-      '**Tidak memerlukan autentikasi.**',
+      '**Tidak memerlukan autentikasi.**\n\n' +
+      '### Ketentuan NIK\n' +
+      'NIK divalidasi secara algoritmik oleh e-KYC (Dukcapil sandbox). Digit ke-7 s/d 12 ' +
+      'wajib berupa tanggal lahir `DDMMYY` yang masuk akal — untuk perempuan, `DD` ditambah 40.\n\n' +
+      'Contoh valid: `3171011508900001` → lahir 15-08-1990 (laki-laki).\n' +
+      'NIK dengan tanggal mustahil ditolak **422 `NIK_VALIDATION_FAILED`**.\n\n' +
+      '### Persetujuan data pribadi\n' +
+      'Field `consentAgreed` **wajib bernilai `true`** (UU No. 27/2022 tentang ' +
+      'Pelindungan Data Pribadi). Bila `false` atau tidak dikirim, request ditolak 400.\n\n' +
+      '### Setelah registrasi\n' +
+      'Akun dibuat dalam kondisi **non-aktif** dan OTP dikirim ke email. Login baru bisa ' +
+      'dilakukan setelah `POST /auth/verify-email` berhasil.',
     operationId: 'authRegisterPewaris',
   })
   @ApiCreatedResponse({
-    description: 'Registrasi Pewaris berhasil. Silakan cek email untuk OTP.',
+    description:
+      'Registrasi berhasil. Akun masih non-aktif — cek email untuk kode OTP verifikasi.',
   })
   @ApiBadRequestResponse({
-    description: 'Validasi gagal — NIK salah, email format salah, dll.',
+    description:
+      'Validasi gagal — format NIK/email salah, atau `consentAgreed` bukan `true`.',
+  })
+  @ApiUnprocessableEntityResponse({
+    description:
+      'NIK gagal validasi algoritmik e-KYC (tanggal lahir pada NIK tidak valid).',
+    schema: {
+      example: {
+        statusCode: 422,
+        message: 'Format tanggal lahir pada NIK tidak valid secara algoritmik.',
+        error: 'NIK_VALIDATION_FAILED',
+        module: 'auth',
+      },
+    },
   })
   @ApiConflictResponse({ description: 'Email atau NIK sudah terdaftar.' })
   registerPewaris(
@@ -159,18 +185,25 @@ export class AuthController {
   @ApiOperation({
     summary: 'Login',
     description:
-      'Login dengan email dan password. Mengembalikan JWT access token.\n\n' +
+      'Login dengan email dan password.\n\n' +
       '**Tidak memerlukan autentikasi.**\n\n' +
-      '**Rate limit**: 5 request/menit per IP.\n\n' +
-      '**Security**: Menggunakan constant-time comparison untuk mencegah timing attack.\n\n' +
-      'Simpan `accessToken` dan gunakan di setiap request berikutnya:\n' +
-      '```\nAuthorization: Bearer <accessToken>\n```',
+      '**Rate limit**: 100 request/menit per IP.\n\n' +
+      '**Security**: constant-time comparison untuk mencegah timing attack.\n\n' +
+      '### Cara token dikirim\n' +
+      'JWT **tidak** dikembalikan di body respons. Token diset sebagai cookie ' +
+      '`accessToken` yang **HttpOnly** agar tidak bisa dibaca JavaScript (mitigasi XSS).\n\n' +
+      '- **Web**: cukup kirim request berikutnya dengan `credentials: "include"`.\n' +
+      '- **Mobile/HTTP client**: gunakan cookie jar (mis. `dio` + `cookie_jar` di Flutter, ' +
+      'atau `curl -c/-b`). Alternatifnya, ambil nilai cookie dari header `Set-Cookie` ' +
+      'lalu kirim sebagai `Authorization: Bearer <token>` — JWT strategy menerima keduanya.\n\n' +
+      '**Akun wajib sudah terverifikasi email.** Akun yang belum verifikasi bersifat ' +
+      'non-aktif dan login akan ditolak 401 `AccountDisabledError`.',
     operationId: 'authLogin',
   })
   @ApiOkResponse({
-    type: AuthResponseDto,
+    type: AuthSessionResponseDto,
     description:
-      'Login berhasil. Simpan `accessToken` untuk digunakan di request selanjutnya.',
+      'Login berhasil. JWT dikirim via cookie HttpOnly `accessToken`, bukan di body.',
   })
   @ApiUnauthorizedResponse({
     description: 'Email atau password salah.',
@@ -188,8 +221,8 @@ export class AuthController {
   })
   async login(
     @Body() dto: LoginDto,
-    @Res({ passthrough: true }) res: Response, // <-- Tambahkan decorator Res
-  ) {
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<AuthSessionResponseDto> {
     const result = await this.orchestrator.login(dto);
 
     // Set HttpOnly Cookie
@@ -270,18 +303,21 @@ export class AuthController {
   @Public()
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ strict: { limit: 100, ttl: 60_000 } }) // 🚨 FIX: Mengizinkan login massal dari sekolah
+  @Throttle({ strict: { limit: 100, ttl: 60_000 } })
   @ApiOperation({
     summary: 'Verifikasi email pengguna',
     description:
-      'Memverifikasi email pengguna menggunakan kode OTP yang dikirimkan ke email.\n\n' +
-      '**Tidak memerlukan autentikasi.**',
+      'Memverifikasi email pengguna menggunakan kode OTP yang dikirimkan ke email. ' +
+      'Setelah berhasil, akun menjadi aktif dan sesi langsung dibuat.\n\n' +
+      '**Tidak memerlukan autentikasi.**\n\n' +
+      'Field OTP bernama `otp` (bukan `otpCode`).\n\n' +
+      'Seperti login, JWT dikirim via cookie HttpOnly `accessToken` — tidak di body respons.',
     operationId: 'authVerifyEmail',
   })
   @ApiOkResponse({
-    type: AuthResponseDto,
+    type: AuthSessionResponseDto,
     description:
-      'Verifikasi berhasil. Simpan `accessToken` untuk digunakan di request selanjutnya.',
+      'Verifikasi berhasil, akun aktif. JWT dikirim via cookie HttpOnly `accessToken`.',
   })
   @ApiBadRequestResponse({
     description:
@@ -299,7 +335,7 @@ export class AuthController {
   async verifyEmail(
     @Body() dto: VerifyEmailDto,
     @Res({ passthrough: true }) res: Response,
-  ) {
+  ): Promise<AuthSessionResponseDto> {
     const result = await this.orchestrator.verifyEmail(dto.email, dto.otp);
 
     // Set HttpOnly Cookie
@@ -390,16 +426,23 @@ export class AuthController {
   @Throttle({ strict: { limit: 10, ttl: 60_000 } })
   @ApiOperation({
     summary: 'Verify Magic Link OTP (Guest Login)',
-    description: 'Login sementara untuk Guest (Saksi/Kontak Darurat).',
+    description:
+      'Login sementara untuk Guest (Saksi/Kontak Darurat) memakai token dari magic link ' +
+      'DAN kode OTP yang dikirim ke email/SMS Saksi.\n\n' +
+      'Token dan OTP bersifat **sekali pakai** — keduanya dihanguskan setelah login berhasil.\n\n' +
+      'JWT dikirim via cookie HttpOnly `accessToken` (masa berlaku 1 hari untuk Guest), ' +
+      'tidak di body respons.',
     operationId: 'authVerifyMagicLink',
   })
   @ApiOkResponse({
-    description: 'Verifikasi berhasil, mengembalikan token Guest.',
+    type: AuthSessionResponseDto,
+    description:
+      'Verifikasi berhasil. Sesi Guest dibuat via cookie HttpOnly `accessToken`.',
   })
   async verifyMagicLink(
     @Body() dto: VerifyMagicLinkOtpDto,
     @Res({ passthrough: true }) res: Response,
-  ) {
+  ): Promise<AuthSessionResponseDto> {
     const result = await this.orchestrator.verifyMagicLinkOtp(dto);
 
     // Set HttpOnly Cookie for Guest

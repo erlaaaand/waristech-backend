@@ -1,18 +1,21 @@
-// src/auth/domains/services/token.service.ts
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService, TokenExpiredError, JsonWebTokenError } from '@nestjs/jwt';
-import { AuthenticatedUser, JwtPayload } from '../entities/jwt-payload.entity';
+import {
+  AuthenticatedUser,
+  JwtPayload,
+} from '../../domains/entities/jwt-payload.entity';
+import { ITokenService } from '../../domains/services/token.service.interface';
 import {
   AuthTokenExpiredError,
   InvalidTokenError,
-} from '../exceptions/auth.exception';
+} from '../../domains/exceptions/auth.exception';
 
 export type JwtExpiresInFormat =
   `${number}d` | `${number}h` | `${number}m` | `${number}s` | number;
 
 @Injectable()
-export class TokenService {
+export class TokenService implements ITokenService {
   private readonly issuer: string;
   private readonly audience: string;
 

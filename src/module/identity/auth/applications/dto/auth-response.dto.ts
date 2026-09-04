@@ -26,10 +26,36 @@ export class AuthUserDto {
   role: string = '';
 }
 
+/**
+ * Bentuk respons SEBENARNYA dari endpoint yang membuat sesi
+ * (login, verify-email, magic-link/verify).
+ *
+ * JWT TIDAK dikirim di body — token diset sebagai cookie `accessToken`
+ * yang HttpOnly, sehingga tidak dapat dibaca JavaScript (mitigasi XSS).
+ * Klien cukup mengirim cookie tersebut pada request berikutnya.
+ */
+export class AuthSessionResponseDto {
+  @ApiProperty({ example: 'Login berhasil' })
+  message: string = '';
+
+  @ApiProperty({
+    type: AuthUserDto,
+    description: 'Data user yang sesinya baru dibuat',
+  })
+  user: AuthUserDto = new AuthUserDto();
+}
+
+/**
+ * Bentuk internal hasil autentikasi di layer aplikasi.
+ *
+ * CATATAN: DTO ini TIDAK dipakai sebagai bentuk respons HTTP. Controller
+ * mengambil `accessToken` dari sini untuk diset sebagai cookie HttpOnly,
+ * lalu mengembalikan `AuthSessionResponseDto` ke klien.
+ */
 export class AuthResponseDto {
   @ApiProperty({
     description:
-      'JWT access token. Gunakan di header: `Authorization: Bearer <token>`',
+      'JWT access token. Dipakai internal oleh controller untuk mengisi cookie HttpOnly — tidak pernah dikirim di body respons.',
     example:
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1NTBlODQwMC4uLiJ9.signature',
   })

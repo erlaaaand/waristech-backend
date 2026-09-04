@@ -53,4 +53,11 @@ export class CreateUserDto {
 
   @IsOptional()
   nik?: string;
+
+  // ── Persetujuan Data Pribadi (UU PDP No. 27/2022) ──
+  @IsOptional()
+  consentGivenAt?: Date;
+
+  @IsOptional()
+  consentVersion?: string;
 }

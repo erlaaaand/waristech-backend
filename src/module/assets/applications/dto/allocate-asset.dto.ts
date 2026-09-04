@@ -1,11 +1,13 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsBoolean,
   IsNotEmpty,
   IsNumber,
   IsOptional,
+  IsString,
   IsUUID,
   Max,
+  MaxLength,
   Min,
 } from 'class-validator';
 
@@ -30,4 +32,15 @@ export class AllocateAssetDto {
   @IsBoolean()
   @IsOptional()
   isExecutor?: boolean;
+
+  @ApiPropertyOptional({
+    example:
+      'Pewaris memilih membagi lebih besar ke anak bungsu karena tanggungan biaya kuliah.',
+    description:
+      'Wajib diisi HANYA jika `percentage` menyimpang dari hasil hitungan skema hukum waris pilihan Pewaris (lihat GET /calculation/preference).',
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(1000)
+  reason?: string;
 }

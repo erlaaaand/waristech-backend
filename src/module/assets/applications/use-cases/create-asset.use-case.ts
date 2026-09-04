@@ -2,14 +2,22 @@ import { Inject, Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { CreateAssetDto } from '../dto/create-asset.dto';
 import { AssetResponseDto } from '../dto/asset-response.dto';
+import { CreateAssetResponseDto } from '../dto/create-asset-response.dto';
+import { KeyShareHolder } from '../../domains/enums/key-share.enum';
+import { AssetCustodyType } from '../../domains/enums/asset.enum';
+import { InheritanceGuidanceService } from '../../domains/services/inheritance-guidance.service';
 import {
   ASSET_REPOSITORY_TOKEN,
   type IAssetRepository,
 } from '../../domains/repositories/asset.repository.interface';
 import {
-  ENCRYPTION_SERVICE_TOKEN,
-  type IEncryptionService,
-} from '../../domains/services/encryption.service.interface';
+  SECRET_SHARING_SERVICE_TOKEN,
+  type ISecretSharingService,
+} from '../../domains/services/secret-sharing.service.interface';
+import {
+  KEY_SHARE_REPOSITORY_TOKEN,
+  type IKeyShareRepository,
+} from '../../domains/repositories/key-share.repository.interface';
 import { AssetDomain } from '../../domains/entities/asset.entity';
 import { AuditLogService } from '../../../shared/audit/applications/services/audit-log.service';
 import {
@@ -24,29 +32,90 @@ export class CreateAssetUseCase {
   constructor(
     @Inject(ASSET_REPOSITORY_TOKEN)
     private readonly assetRepo: IAssetRepository,
-    @Inject(ENCRYPTION_SERVICE_TOKEN)
-    private readonly encryptionService: IEncryptionService,
+    @Inject(SECRET_SHARING_SERVICE_TOKEN)
+    private readonly secretSharingService: ISecretSharingService,
+    @Inject(KEY_SHARE_REPOSITORY_TOKEN)
+    private readonly keyShareRepo: IKeyShareRepository,
+    private readonly guidanceService: InheritanceGuidanceService,
     private readonly auditLogService: AuditLogService,
   ) {}
 
   async execute(
     pewarisId: string,
     dto: CreateAssetDto,
-  ): Promise<AssetResponseDto> {
-    const secretJson = JSON.stringify(dto.secret);
-    const encryptedSecret = await this.encryptionService.encrypt(secretJson);
+  ): Promise<CreateAssetResponseDto> {
+    const assetId = randomUUID();
+    const custodyType = dto.custodyType ?? AssetCustodyType.VAULT;
 
     const asset = await this.assetRepo.create({
-      id: randomUUID(),
+      id: assetId,
       pewarisId,
       type: dto.type,
       assetName: dto.assetName,
       platform: dto.platform,
       accountIdentifier: dto.accountIdentifier,
-      encryptedSecret,
+      custodyType,
     });
 
-    // Audit Trail
+    // ── Jalur GUIDANCE: kredensial tidak pernah masuk sistem ────────────────
+    if (custodyType === AssetCustodyType.GUIDANCE) {
+      this.logAssetCreated(pewarisId, asset, custodyType);
+
+      return {
+        asset: this.toResponseDto(asset),
+        executorShare: null,
+        notarisShare: null,
+        guidance: this.guidanceService.getGuidance(asset.type, asset.platform),
+        warning:
+          'Aset ini dicatat TANPA penitipan kredensial. Ahli waris menempuh prosedur resmi lembaga terkait sesuai panduan di atas.',
+      };
+    }
+
+    // ── Jalur VAULT: pecah kredensial jadi 3 bagian Shamir (threshold 2) ────
+    const secretJson = JSON.stringify(dto.secret);
+    const shares = await this.secretSharingService.splitSecret(secretJson);
+
+    const shareOf = (holder: KeyShareHolder): string => {
+      const found = shares.find((s) => s.holder === holder);
+      if (!found) {
+        throw new Error(`Bagian kunci ${holder} gagal dibuat.`);
+      }
+      return found.rawShare;
+    };
+
+    // HANYA bagian SYSTEM yang dipersistensikan. Bagian EXECUTOR & NOTARIS
+    // dikembalikan sekali ke Pewaris lalu dilupakan server — inilah yang membuat
+    // server tidak pernah memegang cukup bahan untuk membuka brankas sendirian.
+    await this.keyShareRepo.createMany(assetId, [
+      {
+        holder: KeyShareHolder.SYSTEM,
+        encryptedShare: this.secretSharingService.sealSystemShare(
+          shareOf(KeyShareHolder.SYSTEM),
+          assetId,
+        ),
+      },
+    ]);
+
+    // Titik awal hitungan usia kunci untuk pengingat rotasi berkala.
+    await this.assetRepo.update(assetId, { keysRotatedAt: new Date() });
+
+    this.logAssetCreated(pewarisId, asset, custodyType);
+
+    return {
+      asset: this.toResponseDto(asset),
+      executorShare: shareOf(KeyShareHolder.EXECUTOR),
+      notarisShare: shareOf(KeyShareHolder.NOTARIS),
+      guidance: null,
+      warning:
+        'Simpan kedua bagian kunci di atas SEKARANG. Server tidak menyimpannya dan nilai ini tidak akan pernah ditampilkan lagi.',
+    };
+  }
+
+  private logAssetCreated(
+    pewarisId: string,
+    asset: AssetDomain,
+    custodyType: AssetCustodyType,
+  ): void {
     this.auditLogService.logAsync({
       action: AuditAction.ASSET_CREATED,
       category: AuditCategory.WARIS_ASSET,
@@ -55,11 +124,13 @@ export class CreateAssetUseCase {
       actor: { userId: pewarisId },
       resource: 'assets',
       resourceId: asset.id,
-      description: `Pewaris (${pewarisId}) mendaftarkan aset digital baru "${asset.assetName}" di platform ${asset.platform}.`,
-      afterState: { type: asset.type, assetName: asset.assetName },
+      description: `Pewaris (${pewarisId}) mendaftarkan aset digital baru "${asset.assetName}" di platform ${asset.platform} (kustodi: ${custodyType}).`,
+      afterState: {
+        type: asset.type,
+        assetName: asset.assetName,
+        custodyType,
+      },
     });
-
-    return this.toResponseDto(asset);
   }
 
   private toResponseDto(asset: AssetDomain): AssetResponseDto {
@@ -70,6 +141,7 @@ export class CreateAssetUseCase {
       assetName: asset.assetName,
       platform: asset.platform,
       accountIdentifier: asset.accountIdentifier,
+      custodyType: asset.custodyType,
       status: asset.status,
       verifiedByNotarisId: asset.verifiedByNotarisId,
       verifiedAt: asset.verifiedAt,

@@ -1,11 +1,11 @@
 // src/users/domains/mappers/user.mapper.ts
 import { Injectable } from '@nestjs/common';
 import { UserResponseDto } from '../../applications/dto/user-response.dto';
-import { UserEntity } from '../entities/user.entity';
+import { UserDomain } from '../entities/user.entity';
 
 @Injectable()
 export class UserMapper {
-  toResponseDto(entity: UserEntity): UserResponseDto {
+  toResponseDto(entity: UserDomain): UserResponseDto {
     return {
       id: entity.id,
       email: entity.email,
@@ -19,7 +19,7 @@ export class UserMapper {
     };
   }
 
-  toResponseDtoList(entities: UserEntity[]): UserResponseDto[] {
+  toResponseDtoList(entities: UserDomain[]): UserResponseDto[] {
     return entities.map((e) => this.toResponseDto(e));
   }
 }

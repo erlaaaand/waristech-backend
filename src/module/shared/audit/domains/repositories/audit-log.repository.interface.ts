@@ -1,4 +1,4 @@
-import { AuditLogDocument } from '../../domains/entities/audit-log.schema';
+import { AuditLogDomain } from '../entities/audit-log.entity';
 import { CreateAuditLogDto } from '../../applications/dto/create-audit-log.dto';
 import {
   PaginatedAuditResult,
@@ -6,11 +6,11 @@ import {
 } from '../../applications/dto/query-audit-log.dto';
 
 export interface IAuditLogRepository {
-  create(dto: CreateAuditLogDto): Promise<AuditLogDocument>;
+  create(dto: CreateAuditLogDto): Promise<AuditLogDomain>;
   findAllPaginated(
     query: QueryAuditLogDto,
-  ): Promise<PaginatedAuditResult<AuditLogDocument>>;
-  findById(id: string): Promise<AuditLogDocument | null>;
+  ): Promise<PaginatedAuditResult<AuditLogDomain>>;
+  findById(id: string): Promise<AuditLogDomain | null>;
 }
 
 export const AUDIT_LOG_REPOSITORY_TOKEN = Symbol('IAuditLogRepository');

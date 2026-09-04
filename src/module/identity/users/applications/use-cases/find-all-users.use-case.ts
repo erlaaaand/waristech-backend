@@ -4,7 +4,7 @@ import {
   type IUserRepository,
   type FindAllUsersQuery,
   type PaginatedResult,
-} from '../../infrastructures/repositories/user.repository.interface';
+} from '../../domains/repositories/user.repository.interface';
 import { UserResponseDto } from '../dto/user-response.dto';
 import { UserMapper } from '../../domains/mappers/user.mapper';
 

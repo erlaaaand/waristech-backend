@@ -1,98 +1,41 @@
-// src/identity/users/domains/entities/user.entity.ts
-import {
-  BeforeInsert,
-  Column,
-  CreateDateColumn,
-  Entity,
-  Index,
-  OneToMany,
-  PrimaryColumn,
-  type Relation,
-  UpdateDateColumn,
-} from 'typeorm';
-import { randomUUID } from 'crypto';
-import { StoredFileEntity } from '../../../../shared/storage/domains/entities/stored-file.entity';
+import { UserRole } from '../enums/user.enum';
+import { CalculationMethod } from '../../../../calculation/domains/enums/calculation.enum';
 
-export enum UserRole {
-  ADMIN = 'ADMIN',
-  PEWARIS = 'PEWARIS',
-  AHLI_WARIS = 'AHLI_WARIS',
-  NOTARIS = 'NOTARIS',
-  GUEST = 'GUEST', // Saksi / Kontak Darurat
-}
+export { UserRole };
 
-@Entity({ name: 'users' })
-export class UserEntity {
-  @PrimaryColumn({ type: 'varchar', length: 36 })
-  id: string = '';
+export class UserDomain {
+  constructor(
+    public readonly id: string,
+    public readonly email: string,
+    public readonly password: string,
+    public readonly fullName: string,
+    public readonly nik: string | null,
+    public readonly avatarUrl: string | null,
+    public readonly phoneNumber: string,
+    public readonly isActive: boolean,
+    public readonly role: UserRole,
+    public readonly isEmailVerified: boolean,
+    public readonly otpCode: string | null,
+    public readonly otpExpiresAt: Date | null,
+    public readonly resetPasswordOtp: string | null,
+    public readonly resetPasswordOtpExpiresAt: Date | null,
+    public readonly lastCheckInAt: Date,
+    public readonly proofOfLifeEscalatedAt: Date | null,
+    public readonly preferredCalculationMethod: CalculationMethod | null,
+    public readonly consentGivenAt: Date | null,
+    public readonly consentVersion: string | null,
+    /** Public key Notaris (PEM/SPKI base64) untuk enkripsi bagian kunci miliknya. */
+    public readonly publicKey: string | null,
+    public readonly createdAt: Date,
+    public readonly updatedAt: Date,
+  ) {}
 
-  @BeforeInsert()
-  generateId(): void {
-    if (!this.id || this.id.trim().length === 0) {
-      this.id = randomUUID();
-    }
+  isAdmin(): boolean {
+    return this.role === UserRole.ADMIN;
   }
 
-  // ── Identity ─────────────────────────────────────────────────
-  @Column({ type: 'varchar', length: 255, unique: true, nullable: false })
-  email: string = '';
-
-  @Column({ type: 'varchar', length: 255, nullable: false, select: false })
-  password: string = '';
-
-  @Column({ type: 'varchar', length: 150, nullable: false })
-  fullName: string = '';
-
-  @Column({ type: 'varchar', length: 16, nullable: true })
-  nik: string | null = null;
-
-  // ── Foto Profil ──────────────────────────────────────────────
-  @Column({ type: 'varchar', length: 512, nullable: true })
-  avatarUrl: string | null = null;
-
-  // ── Contact & Affiliation ────────
-  @Column({ type: 'varchar', length: 20, nullable: false })
-  phoneNumber: string = '';
-
-  // ── Status & Role ────────────────────────────────────────────
-  @Index()
-  @Column({ type: 'boolean', default: true })
-  isActive: boolean = true;
-
-  @Index()
-  @Column({
-    type: 'enum',
-    enum: UserRole,
-    default: UserRole.PEWARIS,
-  })
-  role: UserRole = UserRole.PEWARIS;
-
-  // ── OTP & Verification ───────────────────────────────────────
-  @Column({ type: 'boolean', default: false })
-  isEmailVerified: boolean = false;
-
-  @Column({ type: 'varchar', length: 10, nullable: true })
-  otpCode: string | null = null;
-
-  @Column({ type: 'timestamp', nullable: true })
-  otpExpiresAt: Date | null = null;
-
-  // ── Reset Password ──────────────────────────────────────────
-  @Column({ type: 'varchar', length: 10, nullable: true })
-  resetPasswordOtp: string | null = null;
-
-  @Column({ type: 'timestamp', nullable: true })
-  resetPasswordOtpExpiresAt: Date | null = null;
-
-  @CreateDateColumn({ type: 'timestamp' })
-  createdAt: Date = new Date();
-
-  @UpdateDateColumn({ type: 'timestamp' })
-  updatedAt: Date = new Date();
-
-  // ── Relations ────────────────────────────────────────────────
-  @OneToMany(() => StoredFileEntity, (file) => file.user, {
-    cascade: false,
-  })
-  storedFiles!: Relation<StoredFileEntity[]>;
+  /** Apakah pengguna sudah memberi persetujuan eksplisit pemrosesan data pribadi (UU PDP). */
+  hasGivenConsent(): boolean {
+    return this.consentGivenAt !== null;
+  }
 }

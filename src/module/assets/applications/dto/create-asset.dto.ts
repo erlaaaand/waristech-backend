@@ -1,14 +1,15 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
   MaxLength,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { AssetType } from '../../domains/enums/asset.enum';
+import { AssetType, AssetCustodyType } from '../../domains/enums/asset.enum';
 
 export class VaultSecretDto {
   @ApiProperty({ example: 'john_doe', required: false })
@@ -60,12 +61,33 @@ export class CreateAssetDto {
   @MaxLength(255)
   accountIdentifier!: string;
 
-  @ApiProperty({
-    type: VaultSecretDto,
-    description: 'Kunci rahasia terstruktur (username, password, PIN, catatan)',
+  @ApiPropertyOptional({
+    enum: AssetCustodyType,
+    default: AssetCustodyType.VAULT,
+    description:
+      '`VAULT` — kredensial dititipkan & dipecah Shamir 2-dari-3 (default).\n' +
+      '`GUIDANCE` — kredensial TIDAK disimpan; sistem hanya menyediakan panduan dokumen & ' +
+      'langkah resmi bagi ahli waris. Disarankan untuk REKENING_BANK dan ASURANSI_JIWA, ' +
+      'karena menyerahkan PIN/password lembaga resmi umumnya melanggar syarat & ketentuan mereka.',
   })
+  @IsEnum(AssetCustodyType)
+  @IsOptional()
+  custodyType?: AssetCustodyType;
+
+  @ApiPropertyOptional({
+    type: VaultSecretDto,
+    description:
+      'Kunci rahasia terstruktur (username, password, PIN, catatan). ' +
+      'WAJIB bila `custodyType` = VAULT; abaikan bila GUIDANCE.',
+  })
+  @ValidateIf(
+    (o: CreateAssetDto) => o.custodyType !== AssetCustodyType.GUIDANCE,
+  )
   @ValidateNested()
   @Type(() => VaultSecretDto)
-  @IsNotEmpty()
-  secret!: VaultSecretDto;
+  @IsNotEmpty({
+    message:
+      'secret wajib diisi untuk aset custodyType VAULT. Gunakan custodyType GUIDANCE bila kredensial tidak ingin dititipkan.',
+  })
+  secret?: VaultSecretDto;
 }

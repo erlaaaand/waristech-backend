@@ -1,6 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Schema as MongooseSchema } from 'mongoose';
-import { AuditCategory, AuditSeverity, AuditStatus } from '../enums/audit.enum';
+import {
+  AuditCategory,
+  AuditSeverity,
+  AuditStatus,
+} from '../../domains/enums/audit.enum';
 
 export type AuditLogDocument = HydratedDocument<AuditLog>;
 
@@ -85,7 +89,9 @@ export class AuditLog {
   @Prop({ type: String, required: false, default: null })
   errorMessage?: string | null;
 
-  @Prop({ type: Date, default: () => new Date(), index: -1 })
+  // Index untuk field ini didefinisikan sekali saja di bawah (AuditLogSchema.index)
+  // agar Mongoose tidak memperingatkan duplicate schema index.
+  @Prop({ type: Date, default: () => new Date() })
   timestamp: Date = new Date();
 }
 

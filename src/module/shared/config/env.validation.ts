@@ -41,6 +41,16 @@ class EnvironmentVariables {
   @IsOptional()
   CORS_ORIGINS?: string;
 
+  // URL frontend (bukan backend) — dipakai membangun link yang diklik
+  // pengguna dari email (undangan Ahli Waris, magic link Saksi). Beda dari
+  // APP_BASE_URL (URL backend sendiri, dipakai membangun URL file upload).
+  @IsUrl(
+    { require_tld: false },
+    { message: 'APP_FRONTEND_URL harus berupa URL yang valid' },
+  )
+  @IsOptional()
+  APP_FRONTEND_URL: string = 'http://localhost:3000';
+
   @IsString()
   @IsOptional()
   COOKIE_DOMAIN?: string;
@@ -147,6 +157,16 @@ class EnvironmentVariables {
   @Min(1)
   @IsOptional()
   THROTTLE_LIMIT_STRICT: number = 10;
+
+  @IsNumber()
+  @Min(1000)
+  @IsOptional()
+  THROTTLE_TTL_DASHBOARD: number = 60_000;
+
+  @IsNumber()
+  @Min(1)
+  @IsOptional()
+  THROTTLE_LIMIT_DASHBOARD: number = 500;
 
   // ── Redis ──────────────────────────────────────────────────
   @IsString()

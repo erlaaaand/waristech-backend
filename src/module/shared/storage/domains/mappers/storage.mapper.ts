@@ -3,10 +3,11 @@ import { Injectable } from '@nestjs/common';
 import {
   FilePurpose,
   RawUploadedFile,
-  StoredFileEntity,
+  StoredFileDomain,
 } from '../entities/stored-file.entity';
 import { StorageResponseDto } from '../../applications/dto/storage-response.dto';
 import { UploadResult } from '../../infrastructures/adapters/storage.adapter.interface';
+import type { ICreateStoredFileData } from '../repositories/stored-file.repository.interface';
 
 export interface IUploadedFile {
   buffer: Buffer;
@@ -26,24 +27,24 @@ export class StorageMapper {
     };
   }
 
-  toEntity(
+  toCreateData(
     result: UploadResult,
     userId: string,
     purpose: FilePurpose = FilePurpose.OTHER,
-  ): StoredFileEntity {
-    const entity = new StoredFileEntity();
-    entity.userId = userId;
-    entity.fileKey = result.fileKey;
-    entity.fileUrl = result.fileUrl;
-    entity.originalName = result.originalName;
-    entity.mimeType = result.mimeType;
-    entity.sizeInBytes = result.sizeInBytes;
-    entity.provider = result.provider;
-    entity.purpose = purpose;
-    return entity;
+  ): ICreateStoredFileData {
+    return {
+      userId,
+      fileKey: result.fileKey,
+      fileUrl: result.fileUrl,
+      originalName: result.originalName,
+      mimeType: result.mimeType,
+      sizeInBytes: result.sizeInBytes,
+      provider: result.provider,
+      purpose,
+    };
   }
 
-  toResponseDto(entity: StoredFileEntity): StorageResponseDto {
+  toResponseDto(entity: StoredFileDomain): StorageResponseDto {
     return {
       storedFileId: entity.id, // ID dari DB — tersedia setelah save()
       fileKey: entity.fileKey,

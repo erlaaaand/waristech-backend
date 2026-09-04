@@ -4,13 +4,13 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   AUDIT_LOG_REPOSITORY_TOKEN,
   type IAuditLogRepository,
-} from '../../infrastructures/repositories/audit-log.repository.interface';
+} from '../../domains/repositories/audit-log.repository.interface';
 import { CreateAuditLogDto } from '../dto/create-audit-log.dto';
 import {
   PaginatedAuditResult,
   QueryAuditLogDto,
 } from '../dto/query-audit-log.dto';
-import { AuditLogDocument } from '../../domains/entities/audit-log.schema';
+import { AuditLogDomain } from '../../domains/entities/audit-log.entity';
 import { AuditLogEvent } from '../events/audit-log.event';
 
 @Injectable()
@@ -55,11 +55,11 @@ export class AuditLogService {
 
   async findAll(
     query: QueryAuditLogDto,
-  ): Promise<PaginatedAuditResult<AuditLogDocument>> {
+  ): Promise<PaginatedAuditResult<AuditLogDomain>> {
     return this.auditRepo.findAllPaginated(query);
   }
 
-  async findById(id: string): Promise<AuditLogDocument | null> {
+  async findById(id: string): Promise<AuditLogDomain | null> {
     return this.auditRepo.findById(id);
   }
 }

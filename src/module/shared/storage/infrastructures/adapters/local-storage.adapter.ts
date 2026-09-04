@@ -31,7 +31,7 @@ export class LocalStorageAdapter implements IStorageAdapter {
 
       this.logger.log(`[Local] File uploaded → ${fullPath}`);
 
-      // Return UploadResult (plain object) — bukan StoredFileEntity.
+      // Return UploadResult (plain object) — bukan StoredFileDomain.
       // Mapper di layer atas yang akan mengkonversi ini ke entity.
       const result: UploadResult = {
         fileKey,

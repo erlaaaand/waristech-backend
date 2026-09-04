@@ -34,3 +34,37 @@ export class NotAuthorizedForFamilyMemberException extends Error {
     this.name = 'NotAuthorizedForFamilyMemberException';
   }
 }
+
+export class InvalidFamilyMemberStatusTransitionException extends Error {
+  constructor(
+    message = 'Data anggota keluarga ini sedang berada di status yang tidak mengizinkan aksi ini (mungkin sudah diproses oleh permintaan lain).',
+  ) {
+    super(message);
+    this.name = 'InvalidFamilyMemberStatusTransitionException';
+  }
+}
+
+export class NonNasabRequiresNotarisVerificationException extends Error {
+  constructor(
+    message = 'Hubungan Non-Nasab wajib diverifikasi oleh Notaris, tidak dapat dikonfirmasi langsung oleh Pewaris.',
+  ) {
+    super(message);
+    this.name = 'NonNasabRequiresNotarisVerificationException';
+  }
+}
+
+export class MissingSupportingDocumentException extends Error {
+  constructor(
+    message = 'Hubungan Non-Nasab wajib menyertakan URL dokumen pendukung (Surat Wasiat/Hibah).',
+  ) {
+    super(message);
+    this.name = 'MissingSupportingDocumentException';
+  }
+}
+
+export class DeathVerificationNotFoundException extends Error {
+  constructor(message = 'Dokumen verifikasi kematian tidak ditemukan.') {
+    super(message);
+    this.name = 'DeathVerificationNotFoundException';
+  }
+}

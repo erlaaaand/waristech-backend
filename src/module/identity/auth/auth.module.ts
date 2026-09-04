@@ -12,9 +12,10 @@ import { InheritanceModule } from '../../inheritance/inheritance.module';
 
 // Strategy
 import { JwtStrategy } from './infrastructures/strategies/jwt.strategy';
+import { TokenService } from './infrastructures/services/token.service';
 
 // Domain
-import { TokenService } from './domains/services/token.service';
+import { TOKEN_SERVICE_TOKEN } from './domains/services/token.service.interface';
 import { AuthValidator } from './domains/validators/auth.validator';
 import { AuthMapper } from './domains/mappers/auth.mapper';
 import { OtpService } from './domains/services/otp.service';
@@ -72,7 +73,10 @@ import { UserLoggedInListener } from './infrastructures/listeners/user-logged-in
   controllers: [AuthController],
   providers: [
     JwtStrategy,
-    TokenService,
+    {
+      provide: TOKEN_SERVICE_TOKEN,
+      useClass: TokenService,
+    },
     OtpService,
     AuthValidator,
     AuthMapper,
@@ -91,6 +95,11 @@ import { UserLoggedInListener } from './infrastructures/listeners/user-logged-in
     GenerateMagicLinkUseCase,
     VerifyMagicLinkOtpUseCase,
   ],
-  exports: [JwtAuthGuard, JwtModule, TokenService],
+  exports: [
+    JwtAuthGuard,
+    JwtModule,
+    TOKEN_SERVICE_TOKEN,
+    GenerateMagicLinkUseCase,
+  ],
 })
 export class AuthModule {}

@@ -2,17 +2,22 @@ import { Inject, Injectable, BadRequestException } from '@nestjs/common';
 import {
   USER_REPOSITORY_TOKEN,
   type IUserRepository,
-} from '../../../users/infrastructures/repositories/user.repository.interface';
-import { TokenService } from '../../domains/services/token.service';
+} from '../../../users/domains/repositories/user.repository.interface';
+import {
+  ITokenService,
+  TOKEN_SERVICE_TOKEN,
+} from '../../domains/services/token.service.interface';
 import { AuthMapper } from '../../domains/mappers/auth.mapper';
 import { AuthResponseDto } from '../dto/auth-response.dto';
+import { CryptoUtil } from '../../../../shared/utils/crypto.util';
 
 @Injectable()
 export class VerifyEmailUseCase {
   constructor(
     @Inject(USER_REPOSITORY_TOKEN)
     private readonly userRepo: IUserRepository,
-    private readonly tokenService: TokenService,
+    @Inject(TOKEN_SERVICE_TOKEN)
+    private readonly tokenService: ITokenService,
     private readonly mapper: AuthMapper,
   ) {}
 
@@ -25,7 +30,7 @@ export class VerifyEmailUseCase {
     if (user.isEmailVerified) {
       throw new BadRequestException('Email sudah diverifikasi.');
     }
-    if (user.otpCode !== otpCode) {
+    if (!user.otpCode || !CryptoUtil.timingSafeEquals(otpCode, user.otpCode)) {
       throw new BadRequestException('Kode OTP salah.');
     }
     if (user.otpExpiresAt && user.otpExpiresAt < new Date()) {

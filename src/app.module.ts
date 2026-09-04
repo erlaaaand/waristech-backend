@@ -6,9 +6,9 @@ import { TransformInterceptor } from './module/shared/common/interceptors/transf
 import { TimeoutInterceptor } from './module/shared/common/interceptors/timeout.interceptor';
 import {
   ThrottlerModule,
-  ThrottlerGuard,
   type ThrottlerModuleOptions,
 } from '@nestjs/throttler';
+import { ResilientThrottlerGuard } from './module/shared/common/guards/resilient-throttler.guard';
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
 import { CacheModule } from '@nestjs/cache-manager';
 import KeyvRedis from '@keyv/redis';
@@ -33,6 +33,8 @@ import { LoggingMiddleware } from './module/shared/common/middlewares/logging.mi
 import { InheritanceModule } from './module/inheritance/inheritance.module';
 import { AssetModule } from './module/assets/asset.module';
 import { CalculationModule } from './module/calculation/calculation.module';
+import { ProofOfLifeModule } from './module/proof-of-life/proof-of-life.module';
+import { ComplianceModule } from './module/shared/compliance/compliance.module';
 
 @Module({
   imports: [
@@ -161,12 +163,14 @@ import { CalculationModule } from './module/calculation/calculation.module';
     InheritanceModule,
     AssetModule,
     CalculationModule,
+    ProofOfLifeModule,
+    ComplianceModule,
   ],
   controllers: [],
   providers: [
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: ResilientThrottlerGuard,
     },
     {
       provide: APP_FILTER,

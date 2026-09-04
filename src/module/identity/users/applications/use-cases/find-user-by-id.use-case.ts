@@ -3,8 +3,8 @@ import { Inject, Injectable } from '@nestjs/common';
 import { UserResponseDto } from '../dto/user-response.dto';
 import { UserMapper } from '../../domains/mappers/user.mapper';
 import { UserValidator } from '../../domains/validators/user.validator';
-import { USER_REPOSITORY_TOKEN } from '../../infrastructures/repositories/user.repository.interface';
-import type { IUserRepository } from '../../infrastructures/repositories/user.repository.interface';
+import { USER_REPOSITORY_TOKEN } from '../../domains/repositories/user.repository.interface';
+import type { IUserRepository } from '../../domains/repositories/user.repository.interface';
 
 import { AuthenticatedUser } from '../../../auth/domains/entities/jwt-payload.entity';
 

@@ -169,4 +169,149 @@ export class MailService implements OnModuleInit {
       );
     }
   }
+
+  /** Tahap Peringatan (hari 1-14 setelah checkpoint 30 hari terlewat). */
+  async sendProofOfLifeReminder(to: string, name: string): Promise<void> {
+    try {
+      const sender = this.configService.get<string>('EMAIL_USER');
+      const appName =
+        this.configService.get<string>('EMAIL_FROM_NAME') || 'WarisTech';
+
+      await this.transporter.sendMail({
+        from: `"${appName}" <${sender}>`,
+        to,
+        subject: `[Penting] Konfirmasi Status Akun ${appName} Anda`,
+        html: `
+          <div style="font-family:Arial,sans-serif">
+            <h2>Halo ${name}</h2>
+
+            <p>
+              Sudah lebih dari 30 hari sejak konfirmasi aktif terakhir Anda di ${appName}.
+            </p>
+
+            <p>
+              Mohon segera login dan lakukan konfirmasi status ("Check-in") untuk memastikan
+              rencana warisan digital Anda tidak memasuki proses verifikasi kematian secara keliru.
+            </p>
+
+            <p>
+              Jika tidak ada respons dalam <b>14 hari</b> ke depan, kami akan menghubungi
+              kontak darurat yang Anda daftarkan.
+            </p>
+          </div>
+        `,
+      });
+
+      this.logger.log(`Proof-of-Life reminder terkirim ke ${to}`);
+    } catch (err: unknown) {
+      this.logger.error(
+        `Gagal mengirim Proof-of-Life reminder ke ${to}`,
+        err instanceof Error ? err.stack : String(err),
+      );
+    }
+  }
+
+  /** Kirim magic link + OTP kepada Saksi untuk proses verifikasi kematian. */
+  async sendWitnessMagicLink(
+    to: string,
+    witnessName: string,
+    token: string,
+    otp: string,
+  ): Promise<void> {
+    try {
+      const sender = this.configService.get<string>('EMAIL_USER');
+      const appName =
+        this.configService.get<string>('EMAIL_FROM_NAME') || 'WarisTech';
+      const baseUrl =
+        this.configService.get<string>('APP_FRONTEND_URL') ||
+        'http://localhost:3000';
+      const link = `${baseUrl}/verifikasi/saksi?token=${token}`;
+
+      await this.transporter.sendMail({
+        from: `"${appName}" <${sender}>`,
+        to,
+        subject: `[${appName}] Permintaan Verifikasi sebagai Saksi`,
+        html: `
+          <div style="font-family:Arial,sans-serif">
+            <h2>Halo ${witnessName}</h2>
+
+            <p>
+              Anda diminta memberikan keputusan sebagai <b>Saksi</b> dalam proses
+              verifikasi kematian di ${appName}.
+            </p>
+
+            <p>Buka tautan berikut untuk melanjutkan:</p>
+            <p><a href="${link}">${link}</a></p>
+
+            <p>Lalu masukkan kode OTP berikut:</p>
+            <h1 style="letter-spacing:8px;color:#2563eb;">${otp}</h1>
+
+            <p>
+              Tautan berlaku <b>24 jam</b>, kode OTP berlaku <b>15 menit</b>.
+            </p>
+
+            <p>
+              Bila Anda merasa tidak seharusnya menerima permintaan ini, abaikan
+              email ini dan segera hubungi keluarga yang bersangkutan.
+            </p>
+          </div>
+        `,
+      });
+
+      this.logger.log(`Magic link Saksi terkirim ke ${to}`);
+    } catch (err: unknown) {
+      this.logger.error(
+        `Gagal mengirim magic link Saksi ke ${to}`,
+        err instanceof Error ? err.stack : String(err),
+      );
+      throw new InternalServerErrorException(
+        'Gagal mengirimkan tautan verifikasi Saksi.',
+      );
+    }
+  }
+
+  /** Tahap Kontak Darurat (hari 15-30 setelah checkpoint 30 hari terlewat). */
+  async sendEmergencyContactAlert(
+    to: string,
+    contactName: string,
+    pewarisName: string,
+  ): Promise<void> {
+    try {
+      const sender = this.configService.get<string>('EMAIL_USER');
+      const appName =
+        this.configService.get<string>('EMAIL_FROM_NAME') || 'WarisTech';
+
+      await this.transporter.sendMail({
+        from: `"${appName}" <${sender}>`,
+        to,
+        subject: `[${appName}] Mohon Konfirmasi Status ${pewarisName}`,
+        html: `
+          <div style="font-family:Arial,sans-serif">
+            <h2>Halo ${contactName}</h2>
+
+            <p>
+              Anda terdaftar sebagai kontak darurat untuk <b>${pewarisName}</b> di ${appName}.
+            </p>
+
+            <p>
+              Kami belum menerima konfirmasi status aktif dari ${pewarisName} selama lebih dari
+              44 hari. Mohon bantu kami memastikan kabar beliau baik-baik saja.
+            </p>
+
+            <p>
+              Jika tidak ada kabar dalam <b>15 hari</b> ke depan, sistem akan otomatis memulai
+              proses verifikasi kematian berjenjang.
+            </p>
+          </div>
+        `,
+      });
+
+      this.logger.log(`Emergency contact alert terkirim ke ${to}`);
+    } catch (err: unknown) {
+      this.logger.error(
+        `Gagal mengirim emergency contact alert ke ${to}`,
+        err instanceof Error ? err.stack : String(err),
+      );
+    }
+  }
 }

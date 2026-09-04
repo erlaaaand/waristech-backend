@@ -14,6 +14,7 @@ import {
 } from '../decorators/audit.decorator';
 import { AuditLogService } from '../applications/services/audit-log.service';
 import { AuditSeverity, AuditStatus } from '../domains/enums/audit.enum';
+import { redactSensitive } from '../../utils/redact-sensitive.util';
 
 interface RequestWithUser extends Request {
   user?: {
@@ -48,9 +49,12 @@ export class AuditInterceptor implements NestInterceptor {
     const resourceId =
       (req.params?.id as string) || (req.params?.userId as string) || null;
 
+    // Samarkan field sensitif (password, OTP, token, dst.) SEBELUM disimpan
+    // ke audit trail — audit log tercatat untuk forensik/kepatuhan, bukan
+    // sebagai tempat penyimpanan kredensial teks polos.
     const beforeState =
       req.body && typeof req.body === 'object'
-        ? (req.body as Record<string, unknown>)
+        ? redactSensitive(req.body as Record<string, unknown>)
         : null;
 
     return next.handle().pipe(
@@ -77,7 +81,7 @@ export class AuditInterceptor implements NestInterceptor {
             beforeState,
             afterState:
               data && typeof data === 'object'
-                ? (data as Record<string, unknown>)
+                ? redactSensitive(data as Record<string, unknown>)
                 : null,
           });
         },

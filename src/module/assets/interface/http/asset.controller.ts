@@ -15,6 +15,7 @@ import {
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import {
   ApiBearerAuth,
+  ApiConflictResponse,
   ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
@@ -38,6 +39,13 @@ import {
 } from '../../applications/dto/asset-response.dto';
 import { AllocateAssetDto } from '../../applications/dto/allocate-asset.dto';
 import { UploadLiquidationProofDto } from '../../applications/dto/upload-liquidation-proof.dto';
+import { CloseAssetDto } from '../../applications/dto/close-asset.dto';
+import { CreateAssetResponseDto } from '../../applications/dto/create-asset-response.dto';
+import { EscrowNotarisShareDto } from '../../applications/dto/escrow-notaris-share.dto';
+import { RotateKeySharesDto } from '../../applications/dto/rotate-key-shares.dto';
+import { RequestLegalFallbackDto } from '../../applications/dto/request-legal-fallback.dto';
+import { ReviewLiquidationProofDto } from '../../applications/dto/review-liquidation-proof.dto';
+import { LiquidationProofResponseDto } from '../../applications/dto/liquidation-proof-response.dto';
 import { AssetOrchestrator } from '../../applications/orchestrator/asset.orchestrator';
 
 @ApiTags('Assets - Harta Warisan')
@@ -56,18 +64,126 @@ export class AssetController {
   @Roles(UserRole.PEWARIS)
   @ApiOperation({
     summary: '(PEWARIS) Tambah Harta Warisan Baru',
-    description: 'Pewaris mendaftarkan harta (aset) ke dalam sistem.',
+    description:
+      'Pewaris mendaftarkan harta (aset) ke dalam sistem. Kredensial aset dipecah menjadi ' +
+      '3 bagian kunci (Shamir 2-dari-3).\n\n' +
+      '**PENTING:** response memuat `executorShare` dan `notarisShare` — ini SATU-SATUNYA ' +
+      'kesempatan menerimanya. Server hanya menyimpan bagian SYSTEM, sehingga tidak pernah ' +
+      'memiliki cukup bahan untuk membuka brankas sendirian. Simpan kedua bagian tersebut di ' +
+      'penyimpanan aman perangkat; nilai tersebut tidak dapat diminta ulang.',
     operationId: 'assetsCreate',
   })
-  @ApiCreatedResponse({ type: AssetResponseDto })
+  @ApiCreatedResponse({ type: CreateAssetResponseDto })
   @ApiForbiddenResponse({
     description: 'Hanya Pewaris yang dapat menambahkan harta.',
   })
   createAsset(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateAssetDto,
-  ): Promise<AssetResponseDto> {
+  ): Promise<CreateAssetResponseDto> {
     return this.orchestrator.createAsset(user.sub, dto);
+  }
+
+  // ── POST /assets/:id/notaris-share (Titip Bagian Kunci Notaris) ─────────
+
+  @Post(':id/notaris-share')
+  @HttpCode(HttpStatus.CREATED)
+  @Roles(UserRole.PEWARIS)
+  @ApiOperation({
+    summary: '(PEWARIS) Titipkan bagian kunci Notaris (terenkripsi)',
+    description:
+      'Ambil public key Notaris via GET /users/notaris/:id/public-key, enkripsi `notarisShare` ' +
+      'DI SISI KLIEN dengan kunci tersebut, lalu kirim ciphertext-nya ke sini. Server menyimpan ' +
+      'ciphertext yang tidak dapat ia buka — hanya Notaris pemegang private key yang bisa.',
+    operationId: 'assetsEscrowNotarisShare',
+  })
+  @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
+  @ApiCreatedResponse({
+    description: 'Bagian kunci Notaris berhasil dititipkan.',
+  })
+  escrowNotarisShare(
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: EscrowNotarisShareDto,
+  ): Promise<{ message: string }> {
+    return this.orchestrator.escrowNotarisShare(user.sub, id, dto);
+  }
+
+  // ── POST /assets/:id/rotate-shares (Rotasi Kunci Berkala) ───────────────
+
+  @Post(':id/rotate-shares')
+  @HttpCode(HttpStatus.OK)
+  @Roles(UserRole.PEWARIS)
+  @ApiOperation({
+    summary: '(PEWARIS) Rotasi bagian kunci aset',
+    description:
+      'Mitigasi risiko: mengganti seluruh bagian kunci agar bagian lama yang mungkin bocor ' +
+      'menjadi tidak berguna.\n\n' +
+      'Alurnya digerakkan klien — server tidak bisa merekonstruksi kredensial: (1) klien ' +
+      'menggabungkan bagian kunci yang ia pegang, (2) memecah ulang rahasia menjadi 3 bagian ' +
+      'baru, (3) mengirim bagian SYSTEM yang baru ke sini. Simpan bagian Eksekutor yang BARU — ' +
+      'bagian lama langsung tidak berlaku.',
+    operationId: 'assetsRotateKeyShares',
+  })
+  @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
+  @ApiOkResponse({ description: 'Bagian kunci berhasil dirotasi.' })
+  rotateKeyShares(
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: RotateKeySharesDto,
+  ): Promise<{ message: string; rotatedAt: Date }> {
+    return this.orchestrator.rotateKeyShares(user.sub, id, dto);
+  }
+
+  // ── POST /assets/:id/legal-fallback (Jalur Hukum Konvensional) ──────────
+
+  @Post(':id/legal-fallback')
+  @HttpCode(HttpStatus.OK)
+  @Roles(UserRole.PEWARIS, UserRole.AHLI_WARIS)
+  @ApiOperation({
+    summary: 'Ajukan jalur pemulihan lewat hukum konvensional',
+    description:
+      'Dipakai bila kunci digital tidak dapat direkonstruksi (mis. perangkat Eksekutor hilang). ' +
+      'Endpoint ini TIDAK memulihkan kunci — bila bagian tersisa kurang dari 2, kredensial ' +
+      'memang tidak dapat dipulihkan siapa pun (konsekuensi matematis skema Shamir). Yang ' +
+      'diberikan adalah panduan jalur resmi (Surat Keterangan Waris + prosedur lembaga), dan ' +
+      'permohonan dicatat di audit trail sebagai bukti pendukung proses hukum.',
+    operationId: 'assetsRequestLegalFallback',
+  })
+  @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
+  @ApiOkResponse({
+    description: 'Permohonan tercatat beserta panduan jalur resmi.',
+  })
+  requestLegalFallback(
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: RequestLegalFallbackDto,
+  ) {
+    return this.orchestrator.requestLegalFallback(id, user.sub, dto);
+  }
+
+  // ── GET /assets/:id/guidance (Panduan Proses Resmi) ─────────────────────
+
+  @SkipThrottle()
+  @Get(':id/guidance')
+  @HttpCode(HttpStatus.OK)
+  @Roles(UserRole.PEWARIS, UserRole.AHLI_WARIS)
+  @ApiOperation({
+    summary: 'Panduan dokumen & langkah resmi (aset berkustodi GUIDANCE)',
+    description:
+      'Untuk aset yang kredensialnya sengaja TIDAK dititipkan ke sistem (mis. rekening bank, ' +
+      'asuransi jiwa), endpoint ini memberi daftar dokumen yang perlu disiapkan, langkah teknis ' +
+      'di lembaga terkait, dan dasar hukumnya. Dapat diakses Pewaris pemilik maupun Ahli Waris ' +
+      'yang dialokasikan aset ini.',
+    operationId: 'assetsGetGuidance',
+  })
+  @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
+  @ApiOkResponse({ description: 'Panduan berhasil diambil.' })
+  getAssetGuidance(
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.orchestrator.getAssetGuidance(id, user.sub);
   }
 
   // ── GET /assets ──────────────────────────────────────────────────────────
@@ -115,6 +231,47 @@ export class AssetController {
   @ApiOkResponse({ type: [AssetResponseDto] })
   listHistoryForNotaris(): Promise<AssetResponseDto[]> {
     return this.orchestrator.listHistoryForNotaris();
+  }
+
+  // ── GET /assets/notaris/liquidation-reviews ──────────────────────────────
+
+  @SkipThrottle()
+  @Get('notaris/liquidation-reviews')
+  @HttpCode(HttpStatus.OK)
+  @Roles(UserRole.NOTARIS)
+  @ApiOperation({
+    summary: '(NOTARIS) Lihat Bukti Pencairan yang Menunggu Tinjauan',
+    description:
+      'Keabsahan bukti pencairan (e-Statement) ditentukan manual oleh Notaris, ' +
+      'bukan oleh sistem otomatis. Buka `pdfFileUrl` (gunakan `pdfPassword` bila terkunci) ' +
+      'lalu putuskan lewat PATCH /assets/liquidation-proofs/:proofId/review.',
+    operationId: 'assetsListPendingLiquidationReviews',
+  })
+  @ApiOkResponse({ type: [LiquidationProofResponseDto] })
+  listPendingLiquidationReviews(): Promise<LiquidationProofResponseDto[]> {
+    return this.orchestrator.listPendingLiquidationReviews();
+  }
+
+  // ── PATCH /assets/liquidation-proofs/:proofId/review ─────────────────────
+
+  @Patch('liquidation-proofs/:proofId/review')
+  @HttpCode(HttpStatus.OK)
+  @Roles(UserRole.NOTARIS)
+  @ApiOperation({
+    summary: '(NOTARIS) Tinjau & Putuskan Bukti Pencairan',
+    description:
+      'APPROVE memindahkan aset ke DISTRIBUTED. REJECT mengeskalasi ke DISPUTED_LIQUIDATION ' +
+      'dan wajib disertai alasan tertulis — dicatat ke audit trail dan diberitahukan ke ahli waris.',
+    operationId: 'assetsReviewLiquidationProof',
+  })
+  @ApiParam({ name: 'proofId', type: 'string', format: 'uuid' })
+  @ApiOkResponse({ description: 'Keputusan tinjauan berhasil dicatat.' })
+  reviewLiquidationProof(
+    @Param('proofId', new ParseUUIDPipe({ version: '4' })) proofId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: ReviewLiquidationProofDto,
+  ): Promise<{ message: string }> {
+    return this.orchestrator.reviewLiquidationProof(proofId, user.sub, dto);
   }
 
   // ── GET /assets/ahli-waris/allocated ─────────────────────────────────────
@@ -241,13 +398,19 @@ export class AssetController {
   @HttpCode(HttpStatus.OK)
   @Roles(UserRole.AHLI_WARIS)
   @ApiOperation({
-    summary: '(AHLI WARIS) Buka Brankas Aset',
+    summary: '(AHLI WARIS) Ambil Bagian Kunci untuk Membuka Brankas',
     description:
-      'Eksekutor melihat plaintext kunci. Ahli Waris biasa hanya melihat info aset tanpa rahasia.',
+      'Endpoint ini TIDAK mengembalikan kredensial dalam bentuk utuh. Eksekutor menerima ' +
+      '`systemShare`, lalu WAJIB menggabungkannya di sisi klien dengan bagian kunci Eksekutor ' +
+      'yang tersimpan di perangkatnya (Shamir combine). Server tidak pernah merekonstruksi ' +
+      'kredensial, sehingga kunci utuh tidak pernah ada di memori server maupun melintas jaringan.\n\n' +
+      'Ahli Waris non-eksekutor hanya melihat info aset tanpa bagian kunci apa pun.',
     operationId: 'assetsUnlock',
   })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
-  @ApiOkResponse({ description: 'Rahasia aset berhasil didapatkan' })
+  @ApiOkResponse({
+    description: 'Bagian kunci berhasil diserahkan ke Eksekutor',
+  })
   unlockAsset(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -304,15 +467,22 @@ export class AssetController {
   @ApiOperation({
     summary: '(NOTARIS) Tutup Kasus & Hapus Data Rahasia',
     description:
-      'Notaris menutup kasus warisan secara final. Data encryptedSecret akan dihancurkan (cryptographic wipe).',
+      'Notaris menutup kasus warisan secara final. Data encryptedSecret akan dihancurkan (cryptographic wipe).\n\n' +
+      'Wajib semua ahli waris non-eksekutor sudah acknowledge penerimaan bagian. Jika belum, ' +
+      'isi `reason` untuk menutup paksa (force-close) — tindakan ini dicatat penuh di audit trail.',
     operationId: 'assetsClose',
   })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiOkResponse({ description: 'Kasus berhasil ditutup dan data dihancurkan' })
+  @ApiConflictResponse({
+    description:
+      "Masih ada ahli waris yang belum acknowledge dan 'reason' tidak diisi.",
+  })
   closeAsset(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CloseAssetDto,
   ) {
-    return this.orchestrator.closeAsset(id, user.sub);
+    return this.orchestrator.closeAsset(id, user.sub, dto.reason);
   }
 }

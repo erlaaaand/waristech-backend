@@ -16,7 +16,7 @@ import {
 import {
   type IStoredFileRepository,
   STORED_FILE_REPOSITORY_TOKEN,
-} from '../../infrastructures/repositories/stored-file.repository.interface';
+} from '../../domains/repositories/stored-file.repository.interface';
 import { FileUploadedEvent } from '../../infrastructures/events/file-uploaded.event';
 
 @Injectable()
@@ -53,8 +53,12 @@ export class UploadFileUseCase {
     const rawFile = this.mapper.toRawUploadedFile(file);
     const uploadResult = await this.storageAdapter.upload(rawFile, fileKey);
 
-    const fileEntity = this.mapper.toEntity(uploadResult, userId, dto.purpose);
-    const savedEntity = await this.storedFileRepo.save(fileEntity);
+    const createData = this.mapper.toCreateData(
+      uploadResult,
+      userId,
+      dto.purpose,
+    );
+    const savedEntity = await this.storedFileRepo.create(createData);
 
     // ── Step 4: Emit event (gunakan savedEntity bukan fileEntity mentah) ──
     this.eventEmitter.emit(

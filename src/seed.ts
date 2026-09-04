@@ -5,8 +5,9 @@ import { UserRole } from './module/identity/users/domains/entities/user.entity';
 import {
   USER_REPOSITORY_TOKEN,
   type IUserRepository,
-} from './module/identity/users/infrastructures/repositories/user.repository.interface';
+} from './module/identity/users/domains/repositories/user.repository.interface';
 import { CryptoUtil } from './module/shared/utils/crypto.util';
+import { CURRENT_PRIVACY_POLICY_VERSION } from './module/shared/config/privacy-policy.constant';
 
 async function seed() {
   const logger = new Logger('Seeder');
@@ -65,17 +66,21 @@ async function seed() {
       const existingUser = await userRepo.findByEmail(userData.email);
 
       if (existingUser) {
-        existingUser.password = hashedPassword;
-        existingUser.fullName = userData.fullName;
-        existingUser.role = userData.role;
-        existingUser.isEmailVerified = true;
-        existingUser.isActive = true;
-        await userRepo.save(existingUser);
+        await userRepo.update(existingUser.id, {
+          password: hashedPassword,
+          fullName: userData.fullName,
+          role: userData.role,
+          isEmailVerified: true,
+          isActive: true,
+        });
         logger.log(`🔄 User updated: ${userData.email} (${userData.role})`);
       } else {
         const newUser = await userRepo.create({
           ...userData,
           password: hashedPassword,
+          // Akun uji dianggap sudah menyetujui kebijakan data pribadi (UU PDP).
+          consentGivenAt: new Date(),
+          consentVersion: CURRENT_PRIVACY_POLICY_VERSION,
         });
         logger.log(`✅ User created: ${newUser.email} (${newUser.role})`);
       }
@@ -97,4 +102,4 @@ async function seed() {
   }
 }
 
-seed();
+void seed();

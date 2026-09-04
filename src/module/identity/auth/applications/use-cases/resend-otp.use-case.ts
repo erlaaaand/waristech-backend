@@ -1,13 +1,20 @@
-import { Inject, Injectable, BadRequestException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import {
   USER_REPOSITORY_TOKEN,
   type IUserRepository,
-} from '../../../users/infrastructures/repositories/user.repository.interface';
+} from '../../../users/domains/repositories/user.repository.interface';
 import { MailService } from '../../../../shared/mail/mail.service';
 import { MessageResponseDto } from '../dto/message-response.dto';
 
 @Injectable()
 export class ResendOtpUseCase {
+  private readonly logger = new Logger(ResendOtpUseCase.name);
+
   constructor(
     @Inject(USER_REPOSITORY_TOKEN)
     private readonly userRepo: IUserRepository,
@@ -34,11 +41,22 @@ export class ResendOtpUseCase {
       otpExpiresAt,
     });
 
-    await this.mailService.sendOtpEmail(
-      user.email,
-      user.fullName || 'Peserta',
-      otpCode,
-    );
+    try {
+      await this.mailService.sendOtpEmail(
+        user.email,
+        user.fullName || 'Peserta',
+        otpCode,
+      );
+    } catch (error: unknown) {
+      this.logger.error(
+        `Gagal mengirim ulang OTP ke ${user.email}.`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return {
+        message:
+          'Kode OTP baru berhasil dibuat, namun pengiriman email gagal. Silakan coba lagi sesaat lagi.',
+      };
+    }
 
     return { message: 'OTP berhasil dikirim ulang. Silakan cek email Anda.' };
   }

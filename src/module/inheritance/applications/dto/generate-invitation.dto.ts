@@ -2,9 +2,10 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   IsEnum,
   IsNotEmpty,
-  IsOptional,
   IsString,
+  IsUrl,
   MaxLength,
+  ValidateIf,
 } from 'class-validator';
 import { RelationshipType } from '../../domains/entities/family-member.entity';
 
@@ -35,7 +36,18 @@ export class GenerateInvitationDto {
     example: 'https://storage.waristech.id/docs/surat-wasiat.pdf',
     required: false,
   })
-  @IsOptional()
-  @IsString()
+  @ValidateIf((dto: GenerateInvitationDto) =>
+    dto.relationshipType === RelationshipType.NON_NASAB
+      ? true
+      : dto.supportingDocumentUrl !== undefined,
+  )
+  @IsNotEmpty({
+    message:
+      'Hubungan Non-Nasab wajib menyertakan URL dokumen pendukung (Surat Wasiat/Hibah).',
+  })
+  @IsUrl(
+    { require_tld: false },
+    { message: 'supportingDocumentUrl harus berupa URL yang valid' },
+  )
   supportingDocumentUrl?: string;
 }

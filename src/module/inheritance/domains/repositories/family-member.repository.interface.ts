@@ -1,5 +1,6 @@
 import {
   FamilyMemberDomain,
+  FamilyMemberStatus,
   RelationshipType,
 } from '../entities/family-member.entity';
 
@@ -19,7 +20,13 @@ export interface IFamilyMemberRepository {
 
   findByPewarisId(pewarisId: string): Promise<FamilyMemberDomain[]>;
 
+  findByAhliWarisId(ahliWarisId: string): Promise<FamilyMemberDomain[]>;
+
   findById(id: string): Promise<FamilyMemberDomain | null>;
+
+  /** (NOTARIS) Cari relasi keluarga berdasarkan status — dipakai untuk
+   * menampilkan antrean Non-Nasab yang menunggu verifikasi. */
+  findByStatus(status: FamilyMemberStatus): Promise<FamilyMemberDomain[]>;
 
   verify(id: string, notarisId: string): Promise<FamilyMemberDomain>;
 

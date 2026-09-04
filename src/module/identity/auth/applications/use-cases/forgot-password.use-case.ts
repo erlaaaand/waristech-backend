@@ -3,7 +3,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   USER_REPOSITORY_TOKEN,
   type IUserRepository,
-} from '../../../users/infrastructures/repositories/user.repository.interface';
+} from '../../../users/domains/repositories/user.repository.interface';
 import { MailService } from '../../../../shared/mail/mail.service';
 import { MessageResponseDto } from '../dto/message-response.dto';
 

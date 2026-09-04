@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Patch,
   Post,
   UseFilters,
   UseGuards,
@@ -27,6 +28,8 @@ import { CalculationExceptionFilter } from '../filters/calculation-exception.fil
 import { SimulateCalculationDto } from '../../applications/dto/simulate-calculation.dto';
 import { CalculationResponseDto } from '../../applications/dto/calculation-response.dto';
 import { DashboardResponseDto } from '../../applications/dto/dashboard-response.dto';
+import { SetCalculationPreferenceDto } from '../../applications/dto/set-calculation-preference.dto';
+import { CalculationMethod } from '../../domains/enums/calculation.enum';
 import { CalculationOrchestrator } from '../../applications/orchestrator/calculation.orchestrator';
 
 @ApiTags('Calculation - Kalkulator Waris')
@@ -76,5 +79,50 @@ export class CalculationController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<DashboardResponseDto> {
     return this.orchestrator.getDashboard(user.sub);
+  }
+
+  // ── PATCH /calculation/preference ───────────────────────────────────────────
+
+  @Patch('preference')
+  @HttpCode(HttpStatus.OK)
+  @Roles(UserRole.PEWARIS)
+  @ApiOperation({
+    summary: '(PEWARIS) Tetapkan Skema Hukum Waris Pilihan',
+    description:
+      'Skema yang dipilih di sini akan dipakai sebagai acuan validasi saat Pewaris ' +
+      'mengalokasikan aset (POST /assets/:id/allocate) ke ahli waris.',
+    operationId: 'calculationSetPreference',
+  })
+  @ApiOkResponse({
+    schema: {
+      example: { preferredCalculationMethod: 'FARAIDH' },
+    },
+  })
+  setPreference(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: SetCalculationPreferenceDto,
+  ): Promise<{ preferredCalculationMethod: CalculationMethod }> {
+    return this.orchestrator.setPreference(user.sub, dto);
+  }
+
+  // ── GET /calculation/preference ─────────────────────────────────────────────
+
+  @SkipThrottle()
+  @Get('preference')
+  @HttpCode(HttpStatus.OK)
+  @Roles(UserRole.PEWARIS)
+  @ApiOperation({
+    summary: '(PEWARIS) Lihat Skema Hukum Waris Pilihan Saat Ini',
+    operationId: 'calculationGetPreference',
+  })
+  @ApiOkResponse({
+    schema: {
+      example: { preferredCalculationMethod: 'FARAIDH' },
+    },
+  })
+  getPreference(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<{ preferredCalculationMethod: CalculationMethod | null }> {
+    return this.orchestrator.getPreference(user.sub);
   }
 }

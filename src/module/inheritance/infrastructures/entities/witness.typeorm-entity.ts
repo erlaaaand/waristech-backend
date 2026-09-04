@@ -40,6 +40,13 @@ export class WitnessTypeOrmEntity {
   @Column({ type: 'timestamp', nullable: true })
   tokenExpiresAt: Date | null = null;
 
+  // ── OTP verifikasi Saksi (dikirim bersama magic link) ────────
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  otpCode: string | null = null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  otpExpiresAt: Date | null = null;
+
   @CreateDateColumn({ type: 'timestamp' })
   createdAt: Date = new Date();
 

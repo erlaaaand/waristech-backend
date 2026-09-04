@@ -7,7 +7,11 @@ import {
   PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { AssetType, AssetStatus } from '../../domains/enums/asset.enum';
+import {
+  AssetType,
+  AssetStatus,
+  AssetCustodyType,
+} from '../../domains/enums/asset.enum';
 import { AssetAllocationTypeOrmEntity } from './asset-allocation.typeorm-entity';
 
 @Entity({ name: 'assets' })
@@ -31,8 +35,15 @@ export class AssetTypeOrmEntity {
   @Column({ type: 'varchar', length: 255 })
   accountIdentifier: string = '';
 
-  @Column({ type: 'varchar', length: 512 })
+  @Column({ type: 'varchar', length: 512, default: '' })
   encryptedSecret: string = '';
+
+  @Column({
+    type: 'enum',
+    enum: AssetCustodyType,
+    default: AssetCustodyType.VAULT,
+  })
+  custodyType: AssetCustodyType = AssetCustodyType.VAULT;
 
   @Index()
   @Column({
@@ -47,6 +58,17 @@ export class AssetTypeOrmEntity {
 
   @Column({ type: 'timestamp', nullable: true })
   verifiedAt: Date | null = null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  cooldownEndsAt: Date | null = null;
+
+  /**
+   * Kapan bagian kunci terakhir dipecah/dirotasi. Dipakai cron pengingat rotasi.
+   * Tidak bisa memakai `updatedAt` karena rotasi hanya menyentuh tabel
+   * asset_key_shares, bukan baris aset ini.
+   */
+  @Column({ type: 'timestamp', nullable: true })
+  keysRotatedAt: Date | null = null;
 
   @OneToMany(
     () => AssetAllocationTypeOrmEntity,

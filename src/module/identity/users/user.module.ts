@@ -3,11 +3,11 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 // Entity
-import { UserEntity } from './domains/entities/user.entity';
+import { UserTypeOrmEntity } from './infrastructures/entities/user.typeorm-entity';
 
 // Repository
 import { UserRepository } from './infrastructures/repositories/user.repository';
-import { USER_REPOSITORY_TOKEN } from './infrastructures/repositories/user.repository.interface';
+import { USER_REPOSITORY_TOKEN } from './domains/repositories/user.repository.interface';
 
 // Domain
 import { UserDomainService } from './domains/services/user-domain.service';
@@ -22,6 +22,8 @@ import { UpdateUserUseCase } from './applications/use-cases/update-user.use-case
 import { UpdateAvatarUseCase } from './applications/use-cases/update-avatar.use-case';
 import { AdminCreateUserUseCase } from './applications/use-cases/admin-create-user.use-case';
 import { FindAllUsersUseCase } from './applications/use-cases/find-all-users.use-case';
+import { RegisterPublicKeyUseCase } from './applications/use-cases/register-public-key.use-case';
+import { GetNotarisPublicKeyUseCase } from './applications/use-cases/get-notaris-public-key.use-case';
 
 // Orchestrator
 import { UserOrchestrator } from './applications/orchestrator/user.orchestrator';
@@ -40,10 +42,12 @@ const USE_CASES = [
   UpdateAvatarUseCase,
   AdminCreateUserUseCase,
   FindAllUsersUseCase,
+  RegisterPublicKeyUseCase,
+  GetNotarisPublicKeyUseCase,
 ];
 
 @Module({
-  imports: [TypeOrmModule.forFeature([UserEntity])],
+  imports: [TypeOrmModule.forFeature([UserTypeOrmEntity])],
   controllers: [UserController],
   providers: [
     // ── Repository (Dependency Inversion) ──────────────────────
@@ -68,6 +72,7 @@ const USE_CASES = [
     USER_REPOSITORY_TOKEN,
     UserDomainService,
     UserMapper,
+    GetNotarisPublicKeyUseCase,
     FindUserByIdUseCase,
     FindUserByEmailUseCase,
     CreateUserUseCase,

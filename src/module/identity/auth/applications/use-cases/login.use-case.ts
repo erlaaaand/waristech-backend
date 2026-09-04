@@ -5,11 +5,14 @@ import { LoginDto } from '../dto/login.dto';
 import { AuthResponseDto } from '../dto/auth-response.dto';
 import { AuthValidator } from '../../domains/validators/auth.validator';
 import { AuthMapper } from '../../domains/mappers/auth.mapper';
-import { TokenService } from '../../domains/services/token.service';
+import {
+  ITokenService,
+  TOKEN_SERVICE_TOKEN,
+} from '../../domains/services/token.service.interface';
 import {
   type IUserRepository,
   USER_REPOSITORY_TOKEN,
-} from '../../../users/infrastructures/repositories/user.repository.interface';
+} from '../../../users/domains/repositories/user.repository.interface';
 import { UserLoggedInEvent } from '../../infrastructures/events/user-logged-in.event';
 
 @Injectable()
@@ -19,7 +22,8 @@ export class LoginUseCase {
     private readonly userRepo: IUserRepository,
     private readonly validator: AuthValidator,
     private readonly mapper: AuthMapper,
-    private readonly tokenService: TokenService,
+    @Inject(TOKEN_SERVICE_TOKEN)
+    private readonly tokenService: ITokenService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 

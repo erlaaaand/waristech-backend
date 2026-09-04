@@ -1,8 +1,11 @@
 import { Global, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { AuditLog, AuditLogSchema } from './domains/entities/audit-log.schema';
+import {
+  AuditLog,
+  AuditLogSchema,
+} from './infrastructures/entities/audit-log.schema';
 import { AuditLogRepository } from './infrastructures/repositories/audit-log.repository';
-import { AUDIT_LOG_REPOSITORY_TOKEN } from './infrastructures/repositories/audit-log.repository.interface';
+import { AUDIT_LOG_REPOSITORY_TOKEN } from './domains/repositories/audit-log.repository.interface';
 import { AuditLogService } from './applications/services/audit-log.service';
 import { AuditLogListener } from './infrastructures/listeners/audit-log.listener';
 import { AuditInterceptor } from './interceptors/audit.interceptor';

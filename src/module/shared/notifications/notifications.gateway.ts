@@ -10,7 +10,17 @@ import { ConfigService } from '@nestjs/config';
 
 @WebSocketGateway({
   cors: {
-    origin: '*',
+    // `origin: '*'` bersama `credentials: true` sebenarnya kombinasi yang
+    // tidak valid menurut spesifikasi CORS (browser modern akan menolaknya
+    // secara diam-diam) — merefleksikan origin request punya efek sama
+    // permisifnya tapi benar-benar berfungsi. Akses sesungguhnya tetap
+    // dijaga oleh verifikasi JWT di `handleConnection` di bawah, bukan CORS;
+    // untuk produksi, pertimbangkan mempersempit ke daftar origin frontend
+    // yang benar-benar dipakai.
+    origin: (
+      _origin: string | undefined,
+      callback: (err: null, allow: boolean) => void,
+    ) => callback(null, true),
     credentials: true,
   },
   namespace: 'notifications',

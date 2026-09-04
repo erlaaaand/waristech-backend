@@ -6,6 +6,7 @@ import {
 import {
   FamilyMemberNotFoundException,
   NotAuthorizedForFamilyMemberException,
+  NonNasabRequiresNotarisVerificationException,
 } from '../../domains/exceptions/inheritance.exception';
 import { FamilyMemberResponseDto } from '../dto/inheritance-response.dto';
 
@@ -28,6 +29,13 @@ export class ConfirmFamilyMemberUseCase {
 
     if (member.pewarisId !== pewarisId) {
       throw new NotAuthorizedForFamilyMemberException();
+    }
+
+    // Hubungan Non-Nasab WAJIB lewat verifikasi Notaris (dokumen pendukung
+    // wajib diperiksa) — tidak boleh dikonfirmasi langsung oleh Pewaris,
+    // walau relasinya masih berstatus PENDING_VERIFICATION saat ini.
+    if (member.requiresDocumentVerification()) {
+      throw new NonNasabRequiresNotarisVerificationException();
     }
 
     const updated =

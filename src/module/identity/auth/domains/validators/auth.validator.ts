@@ -1,7 +1,7 @@
 // src/auth/domains/validators/auth.validator.ts
 import { Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { UserEntity } from '../../../users/domains/entities/user.entity';
+import { UserDomain } from '../../../users/domains/entities/user.entity';
 import {
   InvalidCredentialsError,
   AccountDisabledError,
@@ -12,13 +12,13 @@ const DUMMY_HASH =
 
 @Injectable()
 export class AuthValidator {
-  assertUserExists(user: UserEntity | null): asserts user is UserEntity {
+  assertUserExists(user: UserDomain | null): asserts user is UserDomain {
     if (!user) {
       throw new InvalidCredentialsError();
     }
   }
 
-  assertUserIsActive(user: UserEntity): void {
+  assertUserIsActive(user: UserDomain): void {
     if (!user.isActive) {
       throw new AccountDisabledError();
     }

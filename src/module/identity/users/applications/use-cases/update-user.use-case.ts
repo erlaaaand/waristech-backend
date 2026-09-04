@@ -5,8 +5,11 @@ import { UserResponseDto } from '../dto/user-response.dto';
 import { UserDomainService } from '../../domains/services/user-domain.service';
 import { UserMapper } from '../../domains/mappers/user.mapper';
 import { UserValidator } from '../../domains/validators/user.validator';
-import { USER_REPOSITORY_TOKEN } from '../../infrastructures/repositories/user.repository.interface';
-import type { IUserRepository } from '../../infrastructures/repositories/user.repository.interface';
+import { USER_REPOSITORY_TOKEN } from '../../domains/repositories/user.repository.interface';
+import type {
+  IUserRepository,
+  IUpdateUserData,
+} from '../../domains/repositories/user.repository.interface';
 
 import { AuthenticatedUser } from '../../../auth/domains/entities/jwt-payload.entity';
 
@@ -32,7 +35,7 @@ export class UpdateUserUseCase {
 
     this.validator.assertIsActive(user);
 
-    const updatePayload: Record<string, string | null> = {};
+    const updatePayload: IUpdateUserData = {};
 
     if (dto.fullName !== undefined) {
       updatePayload.fullName = dto.fullName ?? null;

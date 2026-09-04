@@ -4,7 +4,7 @@ import { AuditLogEvent } from '../../applications/events/audit-log.event';
 import {
   AUDIT_LOG_REPOSITORY_TOKEN,
   type IAuditLogRepository,
-} from '../repositories/audit-log.repository.interface';
+} from '../../domains/repositories/audit-log.repository.interface';
 
 @Injectable()
 export class AuditLogListener {

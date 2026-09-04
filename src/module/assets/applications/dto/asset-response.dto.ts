@@ -1,5 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { AssetType, AssetStatus } from '../../domains/enums/asset.enum';
+import {
+  AssetType,
+  AssetStatus,
+  AssetCustodyType,
+} from '../../domains/enums/asset.enum';
 
 export class AssetAllocationResponseDto {
   @ApiProperty() id!: string;
@@ -19,6 +23,12 @@ export class AssetResponseDto {
   @ApiProperty() platform!: string;
   @ApiProperty() accountIdentifier!: string;
   // encryptedSecret is NOT returned here for security
+  @ApiProperty({
+    enum: AssetCustodyType,
+    description:
+      'VAULT: kredensial dititipkan (Shamir). GUIDANCE: kredensial tidak dititipkan, gunakan GET /assets/:id/guidance.',
+  })
+  custodyType!: AssetCustodyType;
   @ApiProperty({ enum: AssetStatus }) status!: AssetStatus;
   @ApiProperty({ nullable: true }) verifiedByNotarisId!: string | null;
   @ApiProperty({ nullable: true }) verifiedAt!: Date | null;

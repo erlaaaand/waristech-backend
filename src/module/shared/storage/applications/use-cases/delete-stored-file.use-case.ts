@@ -12,7 +12,7 @@ import {
 import {
   type IStoredFileRepository,
   STORED_FILE_REPOSITORY_TOKEN,
-} from '../../infrastructures/repositories/stored-file.repository.interface';
+} from '../../domains/repositories/stored-file.repository.interface';
 
 @Injectable()
 export class DeleteStoredFileUseCase {
@@ -34,7 +34,7 @@ export class DeleteStoredFileUseCase {
     }
 
     // 2. Validasi kepemilikan (peserta hanya bisa hapus filenya sendiri)
-    if (fileEntity.userId !== requestingUserId) {
+    if (!fileEntity.isOwnedBy(requestingUserId)) {
       throw new ForbiddenException(
         'Anda tidak memiliki izin untuk menghapus file ini',
       );

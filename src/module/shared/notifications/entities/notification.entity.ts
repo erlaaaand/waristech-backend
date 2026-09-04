@@ -10,7 +10,7 @@ import {
   type Relation,
 } from 'typeorm';
 import { randomUUID } from 'crypto';
-import { UserEntity } from '../../../identity/users/domains/entities/user.entity';
+import { UserTypeOrmEntity } from '../../../identity/users/infrastructures/entities/user.typeorm-entity';
 
 export enum NotificationType {
   INFO = 'INFO',
@@ -35,9 +35,9 @@ export class NotificationEntity {
   @Column({ type: 'varchar', length: 36, nullable: false })
   userId: string = '';
 
-  @ManyToOne(() => UserEntity, { onDelete: 'CASCADE' })
+  @ManyToOne(() => UserTypeOrmEntity, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
-  user!: Relation<UserEntity>;
+  user!: Relation<UserTypeOrmEntity>;
 
   @Column({ type: 'varchar', length: 255, nullable: false })
   title: string = '';

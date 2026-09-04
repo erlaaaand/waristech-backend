@@ -1,6 +1,6 @@
 import { AssetDomain } from '../entities/asset.entity';
 import { AssetAllocationDomain } from '../entities/asset-allocation.entity';
-import { AssetType, AssetStatus } from '../enums/asset.enum';
+import { AssetType, AssetStatus, AssetCustodyType } from '../enums/asset.enum';
 
 export const ASSET_REPOSITORY_TOKEN = Symbol('IAssetRepository');
 
@@ -11,7 +11,9 @@ export interface ICreateAssetData {
   assetName: string;
   platform: string;
   accountIdentifier: string;
-  encryptedSecret: string;
+  custodyType: AssetCustodyType;
+  /** @deprecated Kredensial baru disimpan via Secret Sharing (lihat IKeyShareRepository). */
+  encryptedSecret?: string;
 }
 
 export interface IUpdateAssetData {
@@ -21,6 +23,8 @@ export interface IUpdateAssetData {
   accountIdentifier?: string;
   encryptedSecret?: string;
   status?: AssetStatus;
+  cooldownEndsAt?: Date | null;
+  keysRotatedAt?: Date | null;
 }
 
 export interface IUpsertAllocationData {
@@ -42,9 +46,27 @@ export interface IAssetRepository {
   verify(id: string, notarisId: string): Promise<AssetDomain>;
   reject(id: string, notarisId: string): Promise<AssetDomain>;
   delete(id: string): Promise<void>;
+  /**
+   * Tutup kasus & hancurkan `encryptedSecret` (data shredding) dalam SATU
+   * UPDATE atomik bersyarat (hanya dari status DISTRIBUTED/DISPUTED_LIQUIDATION)
+   * — mencegah penutupan ganda dan menghindari jendela waktu antara "wipe"
+   * dan "null-kan" pada pendekatan dua langkah sebelumnya.
+   */
+  closeAndShred(id: string): Promise<AssetDomain>;
 
   // Allocation
   upsertAllocation(data: IUpsertAllocationData): Promise<AssetAllocationDomain>;
+  /**
+   * Sama seperti upsertAllocation, tapi seluruh baca-validasi-tulis dilakukan
+   * atomik dalam satu transaksi dengan row lock — dipakai jalur produksi
+   * (AllocateAssetUseCase) untuk menutup race condition alokasi bersamaan.
+   */
+  allocateAtomic(
+    assetId: string,
+    ahliWarisId: string,
+    percentage: number,
+    isExecutor: boolean,
+  ): Promise<AssetAllocationDomain>;
   deleteAllocation(allocationId: string): Promise<void>;
   findAllocationsByAssetId(assetId: string): Promise<AssetAllocationDomain[]>;
   acknowledgeAllocation(allocationId: string): Promise<void>;
@@ -52,4 +74,8 @@ export interface IAssetRepository {
   // Scheduler & Background Tasks
   findStaleAssets(threshold: Date): Promise<AssetDomain[]>;
   findStaleLiquidations(threshold: Date): Promise<AssetDomain[]>;
+  findExpiredCooldowns(now: Date): Promise<AssetDomain[]>;
+
+  /** Aset lama yang masih pakai skema `encryptedSecret` tunggal (belum dimigrasi ke Secret Sharing). */
+  findAllWithLegacySecret(): Promise<AssetDomain[]>;
 }

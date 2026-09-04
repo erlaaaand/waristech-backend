@@ -1,11 +1,8 @@
-import { AssetType, AssetStatus } from '../enums/asset.enum';
+import { AssetType, AssetStatus, AssetCustodyType } from '../enums/asset.enum';
 import { AssetAllocationDomain } from './asset-allocation.entity';
-import {
-  AssetAlreadyVerifiedException,
-  AssetAllocationExceededException,
-} from '../exceptions/asset.exception';
+import { AssetAllocationExceededException } from '../exceptions/asset.exception';
 
-export { AssetType, AssetStatus };
+export { AssetType, AssetStatus, AssetCustodyType };
 
 export class AssetDomain {
   constructor(
@@ -15,10 +12,18 @@ export class AssetDomain {
     public readonly assetName: string, // Nama portofolio/aset (misal: "Tabungan Pensiun BCA")
     public readonly platform: string, // Nama platform (misal: "Binance", "GoPay", "BCA")
     public readonly accountIdentifier: string, // Username / email / nomor rekening / nomor telepon
-    private encryptedSecret: string, // PIN / Password / Seed Phrase — TERENKRIPSI
+    /**
+     * Legacy: kredensial terenkripsi kunci-tunggal (aset pra Secret Sharing).
+     * Read-only — kredensial baru TIDAK pernah masuk field ini. Perubahan kunci
+     * dilakukan lewat rotasi bagian Shamir di sisi klien.
+     */
+    private readonly encryptedSecret: string,
+    public readonly custodyType: AssetCustodyType,
     public readonly status: AssetStatus,
     public readonly verifiedByNotarisId: string | null,
     public readonly verifiedAt: Date | null,
+    public readonly cooldownEndsAt: Date | null,
+    public readonly keysRotatedAt: Date | null,
     public readonly allocations: AssetAllocationDomain[],
     public readonly createdAt: Date,
     public readonly updatedAt: Date,
@@ -34,31 +39,35 @@ export class AssetDomain {
     return this.pewarisId === pewarisId;
   }
 
+  /** Aset yang kredensialnya dititipkan & dipecah Shamir (punya bagian kunci). */
+  isVaultCustody(): boolean {
+    return this.custodyType === AssetCustodyType.VAULT;
+  }
+
+  /** Aset tanpa penitipan kredensial — ahli waris menempuh prosedur resmi lembaga. */
+  isGuidanceOnly(): boolean {
+    return this.custodyType === AssetCustodyType.GUIDANCE;
+  }
+
   /** Kembalikan secret terenkripsi untuk disimpan. Jangan expose ke response. */
   getEncryptedSecret(): string {
     return this.encryptedSecret;
   }
 
   /**
-   * Update secret (PIN / Password / Seed Phrase).
-   * Harus dipanggil SETELAH enkripsi dilakukan di Application Layer.
-   * Aset yang sudah VERIFIED tidak boleh diubah.
-   */
-  updateSecret(newEncryptedSecret: string): void {
-    if (this.isVerified()) {
-      throw new AssetAlreadyVerifiedException(
-        'Kredensial aset yang sudah diverifikasi tidak dapat diubah.',
-      );
-    }
-    this.encryptedSecret = newEncryptedSecret;
-  }
-
-  /**
    * Validasi agregat alokasi: total persentase tidak boleh melebihi 100%.
    * @param newPercentage Persentase yang akan ditambahkan.
+   * @param excludeAhliWarisId Bila diisi, alokasi ahli waris ini DIKECUALIKAN
+   *   dari total saat ini — dipakai saat mengoreksi alokasi yang sudah ada
+   *   (bukan menambah ahli waris baru), supaya nilai lama tidak dihitung dua kali.
    */
-  validateNewAllocation(newPercentage: number): void {
-    const current = this.allocations.reduce((sum, a) => sum + a.percentage, 0);
+  validateNewAllocation(
+    newPercentage: number,
+    excludeAhliWarisId?: string,
+  ): void {
+    const current = this.allocations
+      .filter((a) => a.ahliWarisId !== excludeAhliWarisId)
+      .reduce((sum, a) => sum + a.percentage, 0);
     if (current + newPercentage > 100) {
       throw new AssetAllocationExceededException(
         `Total alokasi melebihi 100%. Sisa kapasitas: ${(100 - current).toFixed(2)}%.`,
@@ -73,5 +82,21 @@ export class AssetDomain {
       0,
     );
     return 100 - allocated;
+  }
+
+  /** ID ahli waris (non-eksekutor) yang belum mengonfirmasi (acknowledge) penerimaan bagian. */
+  getUnacknowledgedHeirIds(): string[] {
+    return this.allocations
+      .filter((a) => !a.isExecutor && a.acknowledgedAt === null)
+      .map((a) => a.ahliWarisId);
+  }
+
+  /** Apakah masa tunda (cooling-off) 14 hari sudah lewat dan brankas siap dibuka. */
+  isCooldownExpired(): boolean {
+    return (
+      this.status === AssetStatus.PENDING_COOLDOWN &&
+      this.cooldownEndsAt !== null &&
+      this.cooldownEndsAt <= new Date()
+    );
   }
 }

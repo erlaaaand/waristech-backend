@@ -64,9 +64,32 @@ async function bootstrap(): Promise<void> {
     .get<string>('CORS_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000')
     .split(',')
     .map((o) => o.trim());
+  // `flutter run -d chrome/edge` memakai port acak setiap kali dijalankan
+  // (kecuali --web-port dipatok manual), dan pengujian via LAN IP (mis. HP
+  // fisik atau Edge yang mengakses lewat 192.168.x.x) memakai host berbeda
+  // pula. Di development, izinkan origin localhost/127.0.0.1/LAN privat di
+  // PORT MANAPUN agar tidak perlu mengejar konfigurasi setiap kali dijalankan
+  // ulang. Di production tetap ketat memakai daftar CORS_ORIGINS saja.
+  const devOriginAllowed =
+    /^https?:\/\/(localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|192\.168\.\d+\.\d+)(:\d+)?$/;
 
   app.enableCors({
-    origin: corsOrigins,
+    origin: isProd
+      ? corsOrigins
+      : (origin, callback) => {
+          if (
+            !origin ||
+            devOriginAllowed.test(origin) ||
+            corsOrigins.includes(origin)
+          ) {
+            callback(null, true);
+          } else {
+            callback(
+              new Error(`CORS: origin "${origin}" tidak diizinkan.`),
+              false,
+            );
+          }
+        },
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: 'Content-Type, Accept, Authorization, X-CSRF-Token',
@@ -219,4 +242,17 @@ process.on('unhandledRejection', (reason: unknown) => {
   );
 });
 
-void bootstrap();
+bootstrap().catch((error: unknown) => {
+  // Kegagalan fatal saat startup (mis. MySQL/MongoDB/Redis tidak terjangkau)
+  // sebelumnya hanya tertangkap oleh `unhandledRejection` di atas yang CUMA
+  // log tanpa menghentikan proses — dari luar terlihat seperti hang diam-diam
+  // setelah serangkaian log retry, bukan kegagalan yang jelas. Di sini proses
+  // benar-benar dihentikan dengan pesan tegas & exit code bukan-nol.
+  const logger = new Logger('Bootstrap');
+  logger.error(
+    '❌ Aplikasi GAGAL START. Periksa apakah MySQL, MongoDB, dan Redis sudah ' +
+      'berjalan dan dapat dijangkau sesuai konfigurasi .env.',
+    error instanceof Error ? error.stack : String(error),
+  );
+  process.exit(1);
+});

@@ -11,6 +11,11 @@ import {
   AssetAlreadyVerifiedException,
   AssetNotFoundException,
   AssetNotOwnedException,
+  AssetAllocationExceededException,
+  InvalidAssetStatusTransitionException,
+  InvalidKeyShareFormatException,
+  HeirsNotAcknowledgedException,
+  AllocationDeviatesFromLegalSchemeException,
 } from '../../domains/exceptions/asset.exception';
 
 interface ErrorResponseBody {
@@ -52,6 +57,28 @@ export class AssetExceptionFilter implements ExceptionFilter {
       message = exception.message;
       errorName = exception.name;
     } else if (exception instanceof AssetAlreadyVerifiedException) {
+      status = HttpStatus.CONFLICT;
+      message = exception.message;
+      errorName = exception.name;
+    } else if (exception instanceof AssetAllocationExceededException) {
+      status = HttpStatus.BAD_REQUEST;
+      message = exception.message;
+      errorName = exception.name;
+    } else if (exception instanceof InvalidKeyShareFormatException) {
+      status = HttpStatus.BAD_REQUEST;
+      message = exception.message;
+      errorName = exception.name;
+    } else if (exception instanceof InvalidAssetStatusTransitionException) {
+      status = HttpStatus.CONFLICT;
+      message = exception.message;
+      errorName = exception.name;
+    } else if (exception instanceof HeirsNotAcknowledgedException) {
+      status = HttpStatus.CONFLICT;
+      message = exception.message;
+      errorName = exception.name;
+    } else if (
+      exception instanceof AllocationDeviatesFromLegalSchemeException
+    ) {
       status = HttpStatus.CONFLICT;
       message = exception.message;
       errorName = exception.name;

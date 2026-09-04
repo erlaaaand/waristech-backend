@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AssetModule } from '../assets/asset.module';
 import { InheritanceModule } from '../inheritance/inheritance.module';
+import { UserModule } from '../identity/users/user.module';
 
 // Strategies
 import { FaraidhStrategy } from './domains/strategies/faraidh.strategy';
@@ -13,6 +14,8 @@ import { CalculationStrategyFactory } from './applications/factories/calculation
 // Use Cases
 import { SimulateDistributionUseCase } from './applications/use-cases/simulate-distribution.use-case';
 import { GetDashboardUseCase } from './applications/use-cases/get-dashboard.use-case';
+import { SetCalculationPreferenceUseCase } from './applications/use-cases/set-calculation-preference.use-case';
+import { GetCalculationPreferenceUseCase } from './applications/use-cases/get-calculation-preference.use-case';
 
 // Orchestrator
 import { CalculationOrchestrator } from './applications/orchestrator/calculation.orchestrator';
@@ -24,6 +27,7 @@ import { CalculationController } from './interface/http/calculation.controller';
   imports: [
     AssetModule, // Butuh ASSET_REPOSITORY_TOKEN
     InheritanceModule, // Butuh FAMILY_MEMBER_REPOSITORY_TOKEN
+    UserModule, // Butuh USER_REPOSITORY_TOKEN (preferensi skema hukum waris)
   ],
   controllers: [CalculationController],
   providers: [
@@ -38,6 +42,8 @@ import { CalculationController } from './interface/http/calculation.controller';
     // Use Cases
     SimulateDistributionUseCase,
     GetDashboardUseCase,
+    SetCalculationPreferenceUseCase,
+    GetCalculationPreferenceUseCase,
 
     // Orchestrator
     CalculationOrchestrator,

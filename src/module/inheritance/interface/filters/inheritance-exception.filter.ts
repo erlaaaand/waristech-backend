@@ -13,6 +13,10 @@ import {
   InvitationNotFoundException,
   FamilyMemberNotFoundException,
   NotAuthorizedForFamilyMemberException,
+  DeathVerificationNotFoundException,
+  MissingSupportingDocumentException,
+  InvalidFamilyMemberStatusTransitionException,
+  NonNasabRequiresNotarisVerificationException,
 } from '../../domains/exceptions/inheritance.exception';
 
 interface ErrorResponseBody {
@@ -47,7 +51,8 @@ export class InheritanceExceptionFilter implements ExceptionFilter {
       errorName = exception.name;
     } else if (
       exception instanceof InvitationNotFoundException ||
-      exception instanceof FamilyMemberNotFoundException
+      exception instanceof FamilyMemberNotFoundException ||
+      exception instanceof DeathVerificationNotFoundException
     ) {
       status = HttpStatus.NOT_FOUND;
       message = exception.message;
@@ -62,6 +67,22 @@ export class InheritanceExceptionFilter implements ExceptionFilter {
       errorName = exception.name;
     } else if (exception instanceof NotAuthorizedForFamilyMemberException) {
       status = HttpStatus.FORBIDDEN;
+      message = exception.message;
+      errorName = exception.name;
+    } else if (exception instanceof MissingSupportingDocumentException) {
+      status = HttpStatus.BAD_REQUEST;
+      message = exception.message;
+      errorName = exception.name;
+    } else if (
+      exception instanceof InvalidFamilyMemberStatusTransitionException
+    ) {
+      status = HttpStatus.CONFLICT;
+      message = exception.message;
+      errorName = exception.name;
+    } else if (
+      exception instanceof NonNasabRequiresNotarisVerificationException
+    ) {
+      status = HttpStatus.BAD_REQUEST;
       message = exception.message;
       errorName = exception.name;
     }

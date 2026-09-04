@@ -14,11 +14,25 @@ import { UploadLiquidationProofUseCase } from '../use-cases/upload-liquidation-p
 import { AcknowledgeDistributionUseCase } from '../use-cases/acknowledge-distribution.use-case';
 import { CloseAssetUseCase } from '../use-cases/close-asset.use-case';
 import { AllocateAssetDto } from '../dto/allocate-asset.dto';
+import { CreateAssetResponseDto } from '../dto/create-asset-response.dto';
+import { EscrowNotarisShareDto } from '../dto/escrow-notaris-share.dto';
+import { EscrowNotarisShareUseCase } from '../use-cases/escrow-notaris-share.use-case';
+import { GetAssetGuidanceUseCase } from '../use-cases/get-asset-guidance.use-case';
+import type { AssetGuidanceResponse } from '../use-cases/get-asset-guidance.use-case';
+import { RotateKeySharesUseCase } from '../use-cases/rotate-key-shares.use-case';
+import { RotateKeySharesDto } from '../dto/rotate-key-shares.dto';
+import { RequestLegalFallbackUseCase } from '../use-cases/request-legal-fallback.use-case';
+import type { LegalFallbackResponse } from '../use-cases/request-legal-fallback.use-case';
+import { RequestLegalFallbackDto } from '../dto/request-legal-fallback.dto';
 import { UploadLiquidationProofDto } from '../dto/upload-liquidation-proof.dto';
 import { AssetAllocationResponseDto } from '../dto/asset-response.dto';
 import { GetPendingAssetsNotarisUseCase } from '../use-cases/get-pending-assets-notaris.use-case';
 import { GetAllocatedAssetsAhliWarisUseCase } from '../use-cases/get-allocated-assets-ahli-waris.use-case';
 import { GetHistoryAssetsNotarisUseCase } from '../use-cases/get-history-assets-notaris.use-case';
+import { ReviewLiquidationProofUseCase } from '../use-cases/review-liquidation-proof.use-case';
+import { ReviewLiquidationProofDto } from '../dto/review-liquidation-proof.dto';
+import { GetPendingLiquidationReviewsUseCase } from '../use-cases/get-pending-liquidation-reviews.use-case';
+import { LiquidationProofResponseDto } from '../dto/liquidation-proof-response.dto';
 
 @Injectable()
 export class AssetOrchestrator {
@@ -36,13 +50,62 @@ export class AssetOrchestrator {
     private readonly getPendingAssetsNotarisUc: GetPendingAssetsNotarisUseCase,
     private readonly getAllocatedAssetsAhliWarisUc: GetAllocatedAssetsAhliWarisUseCase,
     private readonly getHistoryAssetsNotarisUc: GetHistoryAssetsNotarisUseCase,
+    private readonly escrowNotarisShareUc: EscrowNotarisShareUseCase,
+    private readonly getAssetGuidanceUc: GetAssetGuidanceUseCase,
+    private readonly rotateKeySharesUc: RotateKeySharesUseCase,
+    private readonly requestLegalFallbackUc: RequestLegalFallbackUseCase,
+    private readonly reviewLiquidationProofUc: ReviewLiquidationProofUseCase,
+    private readonly getPendingLiquidationReviewsUc: GetPendingLiquidationReviewsUseCase,
   ) {}
+
+  reviewLiquidationProof(
+    proofId: string,
+    notarisId: string,
+    dto: ReviewLiquidationProofDto,
+  ): Promise<{ message: string }> {
+    return this.reviewLiquidationProofUc.execute(proofId, notarisId, dto);
+  }
+
+  listPendingLiquidationReviews(): Promise<LiquidationProofResponseDto[]> {
+    return this.getPendingLiquidationReviewsUc.execute();
+  }
+
+  getAssetGuidance(
+    assetId: string,
+    userId: string,
+  ): Promise<AssetGuidanceResponse> {
+    return this.getAssetGuidanceUc.execute(assetId, userId);
+  }
+
+  rotateKeyShares(
+    pewarisId: string,
+    assetId: string,
+    dto: RotateKeySharesDto,
+  ): Promise<{ message: string; rotatedAt: Date }> {
+    return this.rotateKeySharesUc.execute(pewarisId, assetId, dto);
+  }
+
+  requestLegalFallback(
+    assetId: string,
+    userId: string,
+    dto: RequestLegalFallbackDto,
+  ): Promise<LegalFallbackResponse> {
+    return this.requestLegalFallbackUc.execute(assetId, userId, dto.reason);
+  }
 
   createAsset(
     pewarisId: string,
     dto: CreateAssetDto,
-  ): Promise<AssetResponseDto> {
+  ): Promise<CreateAssetResponseDto> {
     return this.createAssetUc.execute(pewarisId, dto);
+  }
+
+  escrowNotarisShare(
+    pewarisId: string,
+    assetId: string,
+    dto: EscrowNotarisShareDto,
+  ): Promise<{ message: string }> {
+    return this.escrowNotarisShareUc.execute(pewarisId, assetId, dto);
   }
 
   listMyAssets(pewarisId: string): Promise<AssetResponseDto[]> {
@@ -108,7 +171,11 @@ export class AssetOrchestrator {
     return this.acknowledgeDistributionUc.execute(assetId, ahliWarisId);
   }
 
-  closeAsset(assetId: string, notarisId: string): Promise<{ message: string }> {
-    return this.closeAssetUc.execute(assetId, notarisId);
+  closeAsset(
+    assetId: string,
+    notarisId: string,
+    reason?: string,
+  ): Promise<{ message: string }> {
+    return this.closeAssetUc.execute(assetId, notarisId, reason);
   }
 }

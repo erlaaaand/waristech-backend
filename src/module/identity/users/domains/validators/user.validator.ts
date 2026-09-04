@@ -6,15 +6,15 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { compare } from 'bcrypt';
-import { UserEntity, UserRole } from '../entities/user.entity';
+import { UserDomain, UserRole } from '../entities/user.entity';
 import { AuthenticatedUser } from '../../../auth/domains/entities/jwt-payload.entity';
 
 @Injectable()
 export class UserValidator {
   assertExists(
-    user: UserEntity | null,
+    user: UserDomain | null,
     id: string,
-  ): asserts user is UserEntity {
+  ): asserts user is UserDomain {
     if (!user) {
       throw new NotFoundException(`User dengan id '${id}' tidak ditemukan`);
     }
@@ -26,7 +26,15 @@ export class UserValidator {
     }
   }
 
-  assertIsActive(user: UserEntity): void {
+  assertNikNotTaken(isTaken: boolean, nik: string): void {
+    if (isTaken) {
+      throw new ConflictException(
+        `NIK '${nik}' sudah terdaftar pada akun lain`,
+      );
+    }
+  }
+
+  assertIsActive(user: UserDomain): void {
     if (!user.isActive) {
       throw new UnauthorizedException('Akun ini sudah dinonaktifkan');
     }

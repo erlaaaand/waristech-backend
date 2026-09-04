@@ -30,13 +30,15 @@ export class InheritanceRegistrationService {
   async completeAhliWarisRegistration(
     payload: AhliWarisRegistrationPayload,
   ): Promise<void> {
-    // 1. Tandai kode undangan sebagai sudah digunakan
-    await this.invitationRepo.markAsUsed(
+    // Catatan: kode undangan sudah DIKLAIM secara atomik (claimPending) oleh
+    // pemanggil SEBELUM akun ahli waris dibuat — di sini tinggal mencatat
+    // siapa yang menukarkannya.
+    await this.invitationRepo.setRedeemedBy(
       payload.invitationCode,
       payload.ahliWarisId,
     );
 
-    // 2. Buat relasi FamilyMember
+    // Buat relasi FamilyMember
     await this.familyMemberRepo.create({
       id: payload.familyMemberId,
       pewarisId: payload.pewarisId,

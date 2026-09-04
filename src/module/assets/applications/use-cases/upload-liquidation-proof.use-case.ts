@@ -16,12 +16,24 @@ import {
 import { AssetStatus } from '../../domains/enums/asset.enum';
 import { LiquidationProofStatus } from '../../domains/enums/liquidation-proof.enum';
 import { LiquidationProofTypeOrmEntity } from '../../infrastructures/entities/liquidation-proof.typeorm-entity';
-
+import { AssetNotifierService } from '../services/asset-notifier.service';
+import { NotificationType } from '../../../shared/notifications/entities/notification.entity';
+import { AuditLogService } from '../../../shared/audit/applications/services/audit-log.service';
 import {
-  FORENSIC_VALIDATOR_TOKEN,
-  type IForensicValidator,
-} from '../services/forensic-validator.interface';
+  AuditAction,
+  AuditCategory,
+  AuditSeverity,
+  AuditStatus,
+} from '../../../shared/audit/domains/enums/audit.enum';
 
+/**
+ * UploadLiquidationProofUseCase
+ *
+ * Eksekutor mengunggah bukti pencairan (e-Statement) + SPTJM. Verifikasi
+ * keasliannya WAJIB dilakukan manual oleh Notaris (lihat ReviewLiquidationProofUseCase)
+ * — tidak ada validasi otomatis di sini. Aset tetap di status LIQUIDATING sampai
+ * Notaris memutuskan.
+ */
 @Injectable()
 export class UploadLiquidationProofUseCase {
   constructor(
@@ -29,8 +41,8 @@ export class UploadLiquidationProofUseCase {
     private readonly assetRepo: IAssetRepository,
     @InjectRepository(LiquidationProofTypeOrmEntity)
     private readonly proofRepo: Repository<LiquidationProofTypeOrmEntity>,
-    @Inject(FORENSIC_VALIDATOR_TOKEN)
-    private readonly forensicValidator: IForensicValidator,
+    private readonly notifier: AssetNotifierService,
+    private readonly auditLogService: AuditLogService,
   ) {}
 
   async execute(
@@ -69,10 +81,10 @@ export class UploadLiquidationProofUseCase {
       );
     }
 
-    // 4. Transisi awal: UNLOCKED → LIQUIDATING
+    // 4. Transisi: UNLOCKED → LIQUIDATING (menunggu tinjauan Notaris)
     await this.assetRepo.update(assetId, { status: AssetStatus.LIQUIDATING });
 
-    // 5. Simpan Liquidation Proof
+    // 5. Simpan Liquidation Proof — menunggu tinjauan manual
     const proof = this.proofRepo.create({
       id: randomUUID(),
       assetId,
@@ -84,42 +96,32 @@ export class UploadLiquidationProofUseCase {
     });
     const saved = await this.proofRepo.save(proof);
 
-    // 6. Jalankan AI Forensic Validator (Mock) secara sinkron untuk MVP
-    // Dalam produksi nyata, ini mungkin dikirim ke Message Queue (RabbitMQ/Kafka)
-    const validationResult = await this.forensicValidator.validateStatement(
-      dto.pdfFileUrl,
-      { from: asset.updatedAt, to: new Date() },
-      dto.pdfPassword,
-    );
+    this.auditLogService.logAsync({
+      action: AuditAction.LIQUIDATION_PROOF_UPLOADED,
+      category: AuditCategory.WARIS_ASSET,
+      severity: AuditSeverity.INFO,
+      status: AuditStatus.SUCCESS,
+      actor: { userId: executorId },
+      resource: 'liquidation_proofs',
+      resourceId: saved.id,
+      description: `Eksekutor (${executorId}) mengunggah bukti pencairan aset "${asset.assetName}". Menunggu tinjauan Notaris.`,
+    });
 
-    if (validationResult.isValid) {
-      // Jika validasi sukses, update proof dan aset
-      await this.proofRepo.update(saved.id, {
-        status: LiquidationProofStatus.VALIDATED,
-        validationNotes: validationResult.notes,
-      });
-      await this.assetRepo.update(assetId, { status: AssetStatus.DISTRIBUTED });
-
-      return {
-        message:
-          'Bukti pencairan diunggah dan validasi AI berhasil. Status aset berubah menjadi DISTRIBUTED.',
-        proofId: saved.id,
-      };
-    } else {
-      // Jika validasi gagal (fraud detected)
-      await this.proofRepo.update(saved.id, {
-        status: LiquidationProofStatus.REJECTED,
-        validationNotes: validationResult.notes,
-      });
-      await this.assetRepo.update(assetId, {
-        status: AssetStatus.DISPUTED_LIQUIDATION,
-      });
-
-      return {
-        message:
-          'Peringatan: Validasi AI menemukan anomali. Status aset di-eskalasi menjadi DISPUTED_LIQUIDATION.',
-        proofId: saved.id,
-      };
+    // 6. Beri tahu Notaris yang memverifikasi aset ini bahwa ada bukti menunggu tinjauan.
+    if (asset.verifiedByNotarisId) {
+      await this.notifier.notifyUser(
+        asset.verifiedByNotarisId,
+        'Bukti Pencairan Menunggu Tinjauan',
+        `Eksekutor mengunggah bukti pencairan untuk aset "${asset.assetName}". ` +
+          'Tinjau dokumennya dan putuskan validitasnya sebelum dana diteruskan ke ahli waris lain.',
+        NotificationType.INFO,
+      );
     }
+
+    return {
+      message:
+        'Bukti pencairan berhasil diunggah dan menunggu tinjauan manual Notaris.',
+      proofId: saved.id,
+    };
   }
 }

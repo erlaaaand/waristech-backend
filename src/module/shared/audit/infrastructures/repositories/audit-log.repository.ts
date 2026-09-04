@@ -1,16 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { AuditLog } from '../entities/audit-log.schema';
 import {
-  AuditLog,
-  AuditLogDocument,
-} from '../../domains/entities/audit-log.schema';
-import { IAuditLogRepository } from './audit-log.repository.interface';
+  AuditActorDomain,
+  AuditLogDomain,
+} from '../../domains/entities/audit-log.entity';
+import { IAuditLogRepository } from '../../domains/repositories/audit-log.repository.interface';
 import { CreateAuditLogDto } from '../../applications/dto/create-audit-log.dto';
 import {
   PaginatedAuditResult,
   QueryAuditLogDto,
 } from '../../applications/dto/query-audit-log.dto';
+
+type AuditLogRecord = AuditLog & { _id: unknown };
 
 @Injectable()
 export class AuditLogRepository implements IAuditLogRepository {
@@ -19,17 +22,44 @@ export class AuditLogRepository implements IAuditLogRepository {
     private readonly auditLogModel: Model<AuditLog>,
   ) {}
 
-  async create(dto: CreateAuditLogDto): Promise<AuditLogDocument> {
+  private toDomain(record: AuditLogRecord): AuditLogDomain {
+    return new AuditLogDomain(
+      String(record._id),
+      record.action,
+      record.category,
+      record.severity,
+      record.status,
+      new AuditActorDomain(
+        record.actor.userId ?? null,
+        record.actor.email ?? null,
+        record.actor.fullName ?? null,
+        record.actor.role ?? 'ANONYMOUS',
+      ),
+      record.resource,
+      record.resourceId ?? null,
+      record.description,
+      record.ipAddress,
+      record.userAgent,
+      record.beforeState ?? null,
+      record.afterState ?? null,
+      record.metadata ?? null,
+      record.errorMessage ?? null,
+      record.timestamp,
+    );
+  }
+
+  async create(dto: CreateAuditLogDto): Promise<AuditLogDomain> {
     const log = new this.auditLogModel({
       ...dto,
       timestamp: new Date(),
     });
-    return log.save();
+    const saved = await log.save();
+    return this.toDomain(saved);
   }
 
   async findAllPaginated(
     query: QueryAuditLogDto,
-  ): Promise<PaginatedAuditResult<AuditLogDocument>> {
+  ): Promise<PaginatedAuditResult<AuditLogDomain>> {
     const {
       page = 1,
       limit = 20,
@@ -79,7 +109,7 @@ export class AuditLogRepository implements IAuditLogRepository {
     const skip = (page - 1) * limit;
     const filter = queryBuilder.getFilter();
 
-    const [data, total] = await Promise.all([
+    const [records, total] = await Promise.all([
       queryBuilder
         .sort({ timestamp: -1 })
         .skip(skip)
@@ -90,7 +120,9 @@ export class AuditLogRepository implements IAuditLogRepository {
     ]);
 
     return {
-      data: data as unknown as AuditLogDocument[],
+      data: (records as unknown as AuditLogRecord[]).map((r) =>
+        this.toDomain(r),
+      ),
       total,
       page,
       limit,
@@ -98,8 +130,8 @@ export class AuditLogRepository implements IAuditLogRepository {
     };
   }
 
-  async findById(id: string): Promise<AuditLogDocument | null> {
-    const log = await this.auditLogModel.findById(id).lean().exec();
-    return log ? (log as unknown as AuditLogDocument) : null;
+  async findById(id: string): Promise<AuditLogDomain | null> {
+    const record = await this.auditLogModel.findById(id).lean().exec();
+    return record ? this.toDomain(record) : null;
   }
 }

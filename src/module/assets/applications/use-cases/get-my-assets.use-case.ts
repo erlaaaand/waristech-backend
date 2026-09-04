@@ -26,6 +26,7 @@ export class GetMyAssetsUseCase {
       assetName: asset.assetName,
       platform: asset.platform,
       accountIdentifier: asset.accountIdentifier,
+      custodyType: asset.custodyType,
       status: asset.status,
       verifiedByNotarisId: asset.verifiedByNotarisId,
       verifiedAt: asset.verifiedAt,

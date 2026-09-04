@@ -3,9 +3,10 @@ import { Inject, Injectable, BadRequestException } from '@nestjs/common';
 import {
   USER_REPOSITORY_TOKEN,
   type IUserRepository,
-} from '../../../users/infrastructures/repositories/user.repository.interface';
+} from '../../../users/domains/repositories/user.repository.interface';
 import { UserDomainService } from '../../../users/domains/services/user-domain.service';
 import { MessageResponseDto } from '../dto/message-response.dto';
+import { CryptoUtil } from '../../../../shared/utils/crypto.util';
 
 @Injectable()
 export class ResetPasswordUseCase {
@@ -25,7 +26,10 @@ export class ResetPasswordUseCase {
     if (!user) {
       throw new BadRequestException('Kode OTP tidak valid atau kadaluarsa.');
     }
-    if (!user.resetPasswordOtp || user.resetPasswordOtp !== otp) {
+    if (
+      !user.resetPasswordOtp ||
+      !CryptoUtil.timingSafeEquals(otp, user.resetPasswordOtp)
+    ) {
       throw new BadRequestException('Kode OTP tidak valid atau kadaluarsa.');
     }
     if (

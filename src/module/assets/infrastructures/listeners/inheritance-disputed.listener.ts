@@ -3,6 +3,8 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { ASSET_REPOSITORY_TOKEN } from '../../domains/repositories/asset.repository.interface';
 import type { IAssetRepository } from '../../domains/repositories/asset.repository.interface';
 import { AssetStatus } from '../../domains/enums/asset.enum';
+import { AssetNotifierService } from '../../applications/services/asset-notifier.service';
+import { NotificationType } from '../../../shared/notifications/entities/notification.entity';
 
 @Injectable()
 export class InheritanceDisputedListener {
@@ -11,6 +13,7 @@ export class InheritanceDisputedListener {
   constructor(
     @Inject(ASSET_REPOSITORY_TOKEN)
     private readonly assetRepo: IAssetRepository,
+    private readonly notifier: AssetNotifierService,
   ) {}
 
   @OnEvent('inheritance.disputed')
@@ -26,6 +29,14 @@ export class InheritanceDisputedListener {
         if (asset.status !== AssetStatus.FROZEN) {
           await this.assetRepo.update(asset.id, { status: AssetStatus.FROZEN });
           this.logger.log(`Froze asset ${asset.id} due to dispute`);
+
+          await this.notifier.notifyAllocatedHeirs(
+            asset.id,
+            'Aset Dibekukan karena Sanggahan',
+            `Ada saksi yang mengajukan sanggahan, sehingga aset "${asset.assetName}" dibekukan. ` +
+              'Proses transisi dihentikan sampai sengketa diselesaikan bersama Notaris.',
+            NotificationType.ERROR,
+          );
         }
       }
     } catch (error) {

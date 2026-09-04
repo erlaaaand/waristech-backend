@@ -1,12 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThan, Repository } from 'typeorm';
+import { IsNull, LessThan, MoreThan, Repository } from 'typeorm';
 import type { IInvitationRepository } from '../../domains/repositories/invitation.repository.interface';
 import {
   InvitationDomain,
   InvitationStatus,
 } from '../../domains/entities/invitation.entity';
 import { InvitationTypeOrmEntity } from '../entities/invitation.typeorm-entity';
+import {
+  InvitationAlreadyUsedException,
+  InvitationExpiredException,
+  InvitationNotFoundException,
+} from '../../domains/exceptions/inheritance.exception';
 
 @Injectable()
 export class InvitationRepository implements IInvitationRepository {
@@ -57,16 +62,41 @@ export class InvitationRepository implements IInvitationRepository {
     return entities.map((e) => this.toDomain(e));
   }
 
-  async markAsUsed(
-    code: string,
-    ahliWarisId: string,
-  ): Promise<InvitationDomain> {
-    await this.repo.update(
-      { code },
-      { status: InvitationStatus.USED, usedByAhliWarisId: ahliWarisId },
+  async claimPending(code: string): Promise<InvitationDomain> {
+    const result = await this.repo.update(
+      {
+        code,
+        status: InvitationStatus.PENDING,
+        expiresAt: MoreThan(new Date()),
+      },
+      { status: InvitationStatus.USED },
     );
+
+    if (!result.affected) {
+      // Klaim gagal — cari tahu kenapa untuk memberi pesan yang tepat.
+      const existing = await this.repo.findOne({ where: { code } });
+      if (!existing) throw new InvitationNotFoundException();
+      if (existing.status === InvitationStatus.USED) {
+        throw new InvitationAlreadyUsedException();
+      }
+      throw new InvitationExpiredException();
+    }
+
     const entity = await this.repo.findOneOrFail({ where: { code } });
     return this.toDomain(entity);
+  }
+
+  async setRedeemedBy(code: string, ahliWarisId: string): Promise<void> {
+    await this.repo.update({ code }, { usedByAhliWarisId: ahliWarisId });
+  }
+
+  async releaseClaim(code: string): Promise<void> {
+    // Hanya lepas klaim yang BELUM sempat diselesaikan (usedByAhliWarisId
+    // masih kosong) — jangan sentuh undangan yang sudah benar-benar selesai.
+    await this.repo.update(
+      { code, status: InvitationStatus.USED, usedByAhliWarisId: IsNull() },
+      { status: InvitationStatus.PENDING },
+    );
   }
 
   async markExpiredByPewarisId(pewarisId: string): Promise<void> {

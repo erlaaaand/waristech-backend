@@ -6,10 +6,8 @@ import {
   NotificationType,
 } from './entities/notification.entity';
 import { NotificationsGateway } from './notifications.gateway';
-import {
-  UserEntity,
-  UserRole,
-} from '../../identity/users/domains/entities/user.entity';
+import { UserRole } from '../../identity/users/domains/entities/user.entity';
+import { UserTypeOrmEntity } from '../../identity/users/infrastructures/entities/user.typeorm-entity';
 
 export interface CreateNotificationDto {
   userId: string;
@@ -23,8 +21,8 @@ export class NotificationsService {
   constructor(
     @InjectRepository(NotificationEntity)
     private readonly notificationRepo: Repository<NotificationEntity>,
-    @InjectRepository(UserEntity)
-    private readonly userRepo: Repository<UserEntity>,
+    @InjectRepository(UserTypeOrmEntity)
+    private readonly userRepo: Repository<UserTypeOrmEntity>,
     private readonly notificationsGateway: NotificationsGateway,
   ) {}
 
