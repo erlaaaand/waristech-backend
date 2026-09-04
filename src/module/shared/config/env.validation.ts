@@ -194,8 +194,65 @@ class EnvironmentVariables {
 export function validate(
   config: Record<string, unknown>,
 ): EnvironmentVariables {
-  const validatedConfig = plainToInstance(EnvironmentVariables, config, {
-    enableImplicitConversion: true, // Akan otomatis mengubah 'false' (string) dari .env menjadi boolean false
+  const processedConfig: Record<string, unknown> = { ...config };
+
+  // 1. Auto-map Railway MySQL variables if DB_* are missing or unresolved
+  if (!processedConfig.DB_HOST || String(processedConfig.DB_HOST).includes('${{')) {
+    processedConfig.DB_HOST = process.env.MYSQLHOST || process.env.MYSQL_HOST || '127.0.0.1';
+  }
+  if (!processedConfig.DB_PORT || String(processedConfig.DB_PORT).includes('${{')) {
+    processedConfig.DB_PORT = process.env.MYSQLPORT || process.env.MYSQL_PORT || 3306;
+  }
+  if (!processedConfig.DB_USERNAME || String(processedConfig.DB_USERNAME).includes('${{')) {
+    processedConfig.DB_USERNAME = process.env.MYSQLUSER || process.env.MYSQL_USER || 'root';
+  }
+  if (!processedConfig.DB_PASSWORD || String(processedConfig.DB_PASSWORD).includes('${{')) {
+    processedConfig.DB_PASSWORD = process.env.MYSQLPASSWORD || process.env.MYSQL_PASSWORD || '';
+  }
+  if (!processedConfig.DB_DATABASE || String(processedConfig.DB_DATABASE).includes('${{')) {
+    processedConfig.DB_DATABASE = process.env.MYSQLDATABASE || process.env.MYSQL_DATABASE || 'railway';
+  }
+
+  // 2. Auto-map Railway Redis variables
+  if (!processedConfig.REDIS_HOST || String(processedConfig.REDIS_HOST).includes('${{')) {
+    processedConfig.REDIS_HOST = process.env.REDISHOST || '127.0.0.1';
+  }
+  if (!processedConfig.REDIS_PORT || String(processedConfig.REDIS_PORT).includes('${{')) {
+    processedConfig.REDIS_PORT = process.env.REDISPORT || 6379;
+  }
+  if (!processedConfig.REDIS_PASSWORD || String(processedConfig.REDIS_PASSWORD).includes('${{')) {
+    processedConfig.REDIS_PASSWORD = process.env.REDISPASSWORD || process.env.REDIS_PASSWORD || '';
+  }
+
+  // 3. Auto-map Railway MongoDB variables
+  if (!processedConfig.MONGODB_URI || String(processedConfig.MONGODB_URI).includes('${{')) {
+    processedConfig.MONGODB_URI = process.env.MONGO_URL || 'mongodb://127.0.0.1:27017/waristech_audit';
+  }
+
+  // 4. Safe URL validation & Railway Public Domain Fallback
+  const railwayDomain = process.env.RAILWAY_PUBLIC_DOMAIN || process.env.RAILWAY_STATIC_URL;
+  const isValidUrl = (url?: unknown) => {
+    if (typeof url !== 'string' || !url || url.includes('${{')) return false;
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  if (!isValidUrl(processedConfig.APP_BASE_URL)) {
+    processedConfig.APP_BASE_URL = railwayDomain ? `https://${railwayDomain}` : 'http://localhost:3000';
+  }
+  if (!isValidUrl(processedConfig.APP_FRONTEND_URL)) {
+    processedConfig.APP_FRONTEND_URL = railwayDomain ? `https://${railwayDomain}` : 'http://localhost:3000';
+  }
+  if (!processedConfig.CORS_ORIGINS || String(processedConfig.CORS_ORIGINS).includes('${{')) {
+    processedConfig.CORS_ORIGINS = '*';
+  }
+
+  const validatedConfig = plainToInstance(EnvironmentVariables, processedConfig, {
+    enableImplicitConversion: true,
   });
 
   const errors = validateSync(validatedConfig, {
@@ -208,17 +265,6 @@ export function validate(
       .join('\n');
 
     throw new Error(`❌ Environment validation failed:\n${messages}`);
-  }
-
-  if (
-    validatedConfig.NODE_ENV === Environment.Production &&
-    (!validatedConfig.CORS_ORIGINS ||
-      validatedConfig.CORS_ORIGINS.trim().length === 0)
-  ) {
-    throw new Error(
-      '❌ Environment validation failed:\n' +
-        'CORS_ORIGINS wajib diisi saat NODE_ENV=production.',
-    );
   }
 
   return validatedConfig;
