@@ -198,35 +198,67 @@ export function validate(
 
   // 1. Auto-map Railway MySQL variables if DB_* are missing or unresolved
   if (!processedConfig.DB_HOST || String(processedConfig.DB_HOST).includes('${{')) {
-    processedConfig.DB_HOST = process.env.MYSQLHOST || process.env.MYSQL_HOST || '127.0.0.1';
+    processedConfig.DB_HOST =
+      process.env.MYSQLHOST ||
+      process.env.MYSQL_HOST ||
+      process.env.DB_HOST ||
+      '127.0.0.1';
   }
   if (!processedConfig.DB_PORT || String(processedConfig.DB_PORT).includes('${{')) {
-    processedConfig.DB_PORT = process.env.MYSQLPORT || process.env.MYSQL_PORT || 3306;
+    processedConfig.DB_PORT =
+      process.env.MYSQLPORT ||
+      process.env.MYSQL_PORT ||
+      process.env.DB_PORT ||
+      3306;
   }
   if (!processedConfig.DB_USERNAME || String(processedConfig.DB_USERNAME).includes('${{')) {
-    processedConfig.DB_USERNAME = process.env.MYSQLUSER || process.env.MYSQL_USER || 'root';
+    processedConfig.DB_USERNAME =
+      process.env.MYSQLUSER ||
+      process.env.MYSQL_USER ||
+      process.env.DB_USERNAME ||
+      'root';
   }
   if (!processedConfig.DB_PASSWORD || String(processedConfig.DB_PASSWORD).includes('${{')) {
-    processedConfig.DB_PASSWORD = process.env.MYSQLPASSWORD || process.env.MYSQL_PASSWORD || '';
+    processedConfig.DB_PASSWORD =
+      process.env.MYSQLPASSWORD ||
+      process.env.MYSQL_PASSWORD ||
+      process.env.DB_PASSWORD ||
+      '';
   }
   if (!processedConfig.DB_DATABASE || String(processedConfig.DB_DATABASE).includes('${{')) {
-    processedConfig.DB_DATABASE = process.env.MYSQLDATABASE || process.env.MYSQL_DATABASE || 'railway';
+    processedConfig.DB_DATABASE =
+      process.env.MYSQLDATABASE ||
+      process.env.MYSQL_DATABASE ||
+      process.env.DB_DATABASE ||
+      'railway';
   }
 
   // 2. Auto-map Railway Redis variables
   if (!processedConfig.REDIS_HOST || String(processedConfig.REDIS_HOST).includes('${{')) {
-    processedConfig.REDIS_HOST = process.env.REDISHOST || '127.0.0.1';
+    processedConfig.REDIS_HOST =
+      process.env.REDISHOST ||
+      process.env.REDIS_HOST ||
+      '127.0.0.1';
   }
   if (!processedConfig.REDIS_PORT || String(processedConfig.REDIS_PORT).includes('${{')) {
-    processedConfig.REDIS_PORT = process.env.REDISPORT || 6379;
+    processedConfig.REDIS_PORT =
+      process.env.REDISPORT ||
+      process.env.REDIS_PORT ||
+      6379;
   }
   if (!processedConfig.REDIS_PASSWORD || String(processedConfig.REDIS_PASSWORD).includes('${{')) {
-    processedConfig.REDIS_PASSWORD = process.env.REDISPASSWORD || process.env.REDIS_PASSWORD || '';
+    processedConfig.REDIS_PASSWORD =
+      process.env.REDISPASSWORD ||
+      process.env.REDIS_PASSWORD ||
+      '';
   }
 
   // 3. Auto-map Railway MongoDB variables
   if (!processedConfig.MONGODB_URI || String(processedConfig.MONGODB_URI).includes('${{')) {
-    processedConfig.MONGODB_URI = process.env.MONGO_URL || 'mongodb://127.0.0.1:27017/waristech_audit';
+    processedConfig.MONGODB_URI =
+      process.env.MONGO_URL ||
+      process.env.MONGODB_URI ||
+      'mongodb://127.0.0.1:27017/waristech_audit';
   }
 
   // 4. Safe URL validation & Railway Public Domain Fallback
