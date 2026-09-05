@@ -74,25 +74,31 @@ async function bootstrap(): Promise<void> {
     /^https?:\/\/(localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|192\.168\.\d+\.\d+)(:\d+)?$/;
 
   app.enableCors({
-    origin: isProd
-      ? corsOrigins
-      : (origin, callback) => {
-          if (
-            !origin ||
-            devOriginAllowed.test(origin) ||
-            corsOrigins.includes(origin)
-          ) {
-            callback(null, true);
-          } else {
-            callback(
-              new Error(`CORS: origin "${origin}" tidak diizinkan.`),
-              false,
-            );
-          }
-        },
+    origin: (origin, callback) => {
+      // Izinkan request tanpa origin (seperti dari curl atau mobile app native)
+      if (!origin) {
+        return callback(null, true);
+      }
+      
+      // Di production, cek apakah origin ada di daftar ATAU daftar memiliki '*'
+      // Di development, izinkan juga pola localhost/LAN
+      if (
+        corsOrigins.includes('*') ||
+        corsOrigins.includes(origin) ||
+        (!isProd && devOriginAllowed.test(origin))
+      ) {
+        callback(null, true); // Merefleksikan origin agar credentials:true berfungsi di browser
+      } else {
+        callback(
+          new Error(`CORS: origin "${origin}" tidak diizinkan oleh kebijakan server.`),
+          false,
+        );
+      }
+    },
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: 'Content-Type, Accept, Authorization, X-CSRF-Token',
+    allowedHeaders:
+      'Content-Type, Accept, Authorization, X-CSRF-Token, x-client',
   });
 
   // 3. Global Prefix
