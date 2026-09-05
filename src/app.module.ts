@@ -63,7 +63,8 @@ import { ComplianceModule } from './module/shared/compliance/compliance.module';
           password: configService.get<string>('DB_PASSWORD'),
           database: configService.get<string>('DB_DATABASE'),
           autoLoadEntities: true,
-          synchronize: !isProduction,
+          // Aktifkan synchronize sementara agar tabel otomatis terbuat di Railway (karena belum ada migrasi)
+          synchronize: true,
           extra: {
             connectionLimit: configService.get<number>('DB_CONNECTION_LIMIT'),
           },
