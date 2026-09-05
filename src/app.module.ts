@@ -134,7 +134,9 @@ import { ComplianceModule } from './module/shared/compliance/compliance.module';
         const redisHost = configService.get<string>('REDIS_HOST', 'localhost');
         const redisPort = configService.get<number>('REDIS_PORT', 6379);
         const redisPassword = configService.get<string>('REDIS_PASSWORD', '');
-        const auth = redisPassword ? `:${redisPassword}@` : '';
+        const auth = redisPassword
+          ? `:${encodeURIComponent(redisPassword)}@`
+          : '';
         return {
           stores: [new KeyvRedis(`redis://${auth}${redisHost}:${redisPort}`)],
           ttl: 60000,

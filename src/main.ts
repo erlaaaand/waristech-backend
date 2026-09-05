@@ -158,10 +158,12 @@ async function bootstrap(): Promise<void> {
   });
 
   // Terapkan middleware CSRF untuk semua rute NestJS
-  // (Otomatis BYPASS jika request menggunakan Authorization: Bearer <token> untuk Mobile App / API Client)
+  // (Otomatis BYPASS jika request menggunakan Authorization: Bearer <token> atau header x-client: mobile untuk Mobile App)
   app.use((req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
+    const isMobileClient = req.headers['x-client'] === 'mobile';
+
+    if ((authHeader && authHeader.startsWith('Bearer ')) || isMobileClient) {
       return next();
     }
 
