@@ -63,19 +63,17 @@ export class MailService implements OnModuleInit {
       typeof this.transporter.verify === 'function'
     ) {
       try {
-        const verifyPromise = this.transporter.verify();
-        if (verifyPromise && typeof verifyPromise.then === 'function') {
-          verifyPromise
-            .then(() => {
-              this.logger.log('✅ SMTP connection berhasil.');
-            })
-            .catch((err: unknown) => {
-              this.logger.error(
-                'SMTP Verify Error',
-                err instanceof Error ? err.stack : String(err),
-              );
-            });
-        }
+        this.transporter
+          .verify()
+          .then(() => {
+            this.logger.log('✅ SMTP connection berhasil.');
+          })
+          .catch((err: unknown) => {
+            this.logger.error(
+              'SMTP Verify Error',
+              err instanceof Error ? err.stack : String(err),
+            );
+          });
       } catch (err: unknown) {
         this.logger.error(
           'SMTP Verify Error (Sync)',

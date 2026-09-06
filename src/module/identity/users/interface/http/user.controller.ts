@@ -95,13 +95,14 @@ export class UserController {
   }
 
   // ── GET /admin/dashboard-stats ─────────────────────────────────────────────
-  
+
   @Get('admin/dashboard-stats')
   @HttpCode(HttpStatus.OK)
   @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: '(ADMIN) Mendapatkan statistik dashboard',
-    description: 'Mengambil jumlah pengguna, aset terdaftar, aset pending, dan log kritis.',
+    description:
+      'Mengambil jumlah pengguna, aset terdaftar, aset pending, dan log kritis.',
     operationId: 'adminDashboardStats',
   })
   @ApiOkResponse({ description: 'Berhasil mendapatkan statistik' })

@@ -19,7 +19,8 @@ import {
 } from '../../domains/repositories/user.repository.interface';
 import { AuthenticatedUser } from '../../../auth/domains/entities/jwt-payload.entity';
 import { EntityManager } from 'typeorm';
-import { AuditLogService } from '../../../shared/audit/applications/services/audit-log.service';
+import { AuditLogService } from '../../../../shared/audit/applications/services/audit-log.service';
+import { AuditSeverity } from '../../../../shared/audit/domains/enums/audit.enum';
 
 @Injectable()
 export class UserOrchestrator {
@@ -117,9 +118,12 @@ export class UserOrchestrator {
     // AuditLogService di wt-backend menggunakan Mongoose.
     let criticalLogs = 0;
     try {
-      const logs = await this.auditLogService.getPaginatedLogs({ severity: 'CRITICAL' as any, limit: 1 });
+      const logs = await this.auditLogService.findAll({
+        severity: AuditSeverity.CRITICAL,
+        limit: 1,
+      });
       criticalLogs = logs.total;
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to get critical logs count', err);
     }
 

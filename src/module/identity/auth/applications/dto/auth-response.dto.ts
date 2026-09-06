@@ -45,7 +45,8 @@ export class AuthSessionResponseDto {
   user: AuthUserDto = new AuthUserDto();
 
   @ApiPropertyOptional({
-    description: 'Token JWT (tersedia untuk fallback jika HttpOnly cookie terblokir oleh policy cross-domain browser)',
+    description:
+      'Token JWT (tersedia untuk fallback jika HttpOnly cookie terblokir oleh policy cross-domain browser)',
   })
   accessToken?: string;
 }
