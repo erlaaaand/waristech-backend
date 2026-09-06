@@ -23,6 +23,13 @@ export class UserResponseDto {
   fullName: string | null = null;
 
   @ApiPropertyOptional({
+    example: '3201234567890001',
+    nullable: true,
+    description: 'NIK (Nomor Induk Kependudukan), null jika belum diisi',
+  })
+  nik: string | null = null;
+
+  @ApiPropertyOptional({
     example: 'https://storage.googleapis.com/...',
     nullable: true,
     description: 'URL foto profil',
@@ -46,6 +53,12 @@ export class UserResponseDto {
     description: 'false jika akun telah dinonaktifkan (soft delete)',
   })
   isActive: boolean = false;
+
+  @ApiProperty({
+    example: true,
+    description: 'true jika email sudah diverifikasi',
+  })
+  isEmailVerified: boolean = false;
 
   @ApiProperty({
     example: '2024-01-15T10:30:00.000Z',

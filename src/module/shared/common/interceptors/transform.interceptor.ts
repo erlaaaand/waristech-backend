@@ -36,19 +36,22 @@ export class TransformInterceptor<T> implements NestInterceptor<
         }
 
         const isObject = data !== null && typeof data === 'object';
-        const msg =
+        const rawMsg =
           isObject && 'message' in data
             ? (data as Record<string, unknown>).message
-            : 'Operation successful';
-        const innerData =
-          isObject && 'data' in data
-            ? (data as Record<string, unknown>).data
-            : (data ?? null);
+            : undefined;
 
+        // Catatan: controller kadang mengembalikan objek dengan field `data`
+        // miliknya sendiri yang bersifat domain (mis. PaginatedUsersResponseDto
+        // = { data, total, page, limit, totalPages }) — bukan sebagai envelope
+        // manual. Field tersebut TIDAK boleh "dibongkar" di sini, karena akan
+        // membuang total/page/totalPages yang jadi saudara dari `data`.
+        // Seluruh return value controller selalu dibungkus utuh sebagai `data`;
+        // hanya `message` yang boleh di-override jika controller menyediakannya.
         return {
           statusCode: response.statusCode,
-          message: typeof msg === 'string' ? msg : 'Operation successful',
-          data: innerData as T,
+          message: typeof rawMsg === 'string' ? rawMsg : 'Operation successful',
+          data: (data ?? null) as T,
         };
       }),
     );

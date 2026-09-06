@@ -10,10 +10,12 @@ export class UserMapper {
       id: entity.id,
       email: entity.email,
       fullName: entity.fullName,
+      nik: entity.nik,
       avatarUrl: entity.avatarUrl,
       phoneNumber: entity.phoneNumber,
       role: entity.role,
       isActive: entity.isActive,
+      isEmailVerified: entity.isEmailVerified,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
     };
