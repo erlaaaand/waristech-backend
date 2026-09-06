@@ -27,6 +27,11 @@ export class FamilyMemberResponseDto {
   @ApiProperty() id: string = '';
   @ApiProperty() pewarisId: string = '';
   @ApiProperty() ahliWarisId: string = '';
+  @ApiProperty({
+    description: 'Nama lengkap akun Ahli Waris terkait.',
+    nullable: true,
+  })
+  ahliWarisName: string | null = null;
   @ApiProperty({ enum: RelationshipType }) relationshipType: RelationshipType =
     RelationshipType.NASAB;
   @ApiProperty() relationshipDescription: string = '';

@@ -58,6 +58,7 @@ export class VerifyFamilyMemberUseCase {
       id: m.id,
       pewarisId: m.pewarisId,
       ahliWarisId: m.ahliWarisId,
+      ahliWarisName: null,
       relationshipType: m.relationshipType,
       relationshipDescription: m.relationshipDescription,
       status: m.status,

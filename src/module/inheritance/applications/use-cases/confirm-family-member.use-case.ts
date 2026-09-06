@@ -45,6 +45,7 @@ export class ConfirmFamilyMemberUseCase {
       id: updated.id,
       pewarisId: updated.pewarisId,
       ahliWarisId: updated.ahliWarisId,
+      ahliWarisName: null,
       relationshipType: updated.relationshipType,
       relationshipDescription: updated.relationshipDescription,
       status: updated.status,

@@ -35,6 +35,7 @@ export class GetMyFamilyMembershipUseCase {
           pewarisId: m.pewarisId,
           pewarisName: pewaris?.fullName ?? null,
           ahliWarisId: m.ahliWarisId,
+          ahliWarisName: null,
           relationshipType: m.relationshipType,
           relationshipDescription: m.relationshipDescription,
           status: m.status,
