@@ -43,6 +43,7 @@ import { CloseAssetDto } from '../../applications/dto/close-asset.dto';
 import { CreateAssetResponseDto } from '../../applications/dto/create-asset-response.dto';
 import { EscrowNotarisShareDto } from '../../applications/dto/escrow-notaris-share.dto';
 import { RotateKeySharesDto } from '../../applications/dto/rotate-key-shares.dto';
+import { RejectAssetDto } from '../../applications/dto/reject-asset.dto';
 import { RequestLegalFallbackDto } from '../../applications/dto/request-legal-fallback.dto';
 import { ReviewLiquidationProofDto } from '../../applications/dto/review-liquidation-proof.dto';
 import { LiquidationProofResponseDto } from '../../applications/dto/liquidation-proof-response.dto';
@@ -439,9 +440,10 @@ export class AssetController {
   })
   rejectAsset(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() dto: RejectAssetDto,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<AssetResponseDto> {
-    return this.orchestrator.rejectAsset(id, user.sub);
+    return this.orchestrator.rejectAsset(id, user.sub, dto.reason);
   }
 
   // ── POST /assets/:id/allocate ────────────────────────────────────────────

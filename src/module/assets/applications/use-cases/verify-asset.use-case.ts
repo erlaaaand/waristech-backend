@@ -13,6 +13,8 @@ import {
   AuditSeverity,
   AuditStatus,
 } from '../../../shared/audit/domains/enums/audit.enum';
+import { AssetNotifierService } from '../services/asset-notifier.service';
+import { NotificationType } from '../../../shared/notifications/entities/notification.entity';
 
 @Injectable()
 export class VerifyAssetUseCase {
@@ -20,6 +22,7 @@ export class VerifyAssetUseCase {
     @Inject(ASSET_REPOSITORY_TOKEN)
     private readonly assetRepo: IAssetRepository,
     private readonly auditLogService: AuditLogService,
+    private readonly notifier: AssetNotifierService,
   ) {}
 
   async verify(id: string, notarisId: string): Promise<AssetResponseDto> {
@@ -46,7 +49,11 @@ export class VerifyAssetUseCase {
     return this.toResponseDto(updated);
   }
 
-  async reject(id: string, notarisId: string): Promise<AssetResponseDto> {
+  async reject(
+    id: string,
+    notarisId: string,
+    reason: string,
+  ): Promise<AssetResponseDto> {
     const asset = await this.assetRepo.findById(id);
 
     if (!asset) throw new AssetNotFoundException();
@@ -62,10 +69,18 @@ export class VerifyAssetUseCase {
       actor: { userId: notarisId },
       resource: 'assets',
       resourceId: id,
-      description: `Notaris (${notarisId}) menolak verifikasi aset "${updated.assetName}" milik Pewaris (${updated.pewarisId}).`,
+      description: `Notaris (${notarisId}) menolak verifikasi aset "${updated.assetName}" milik Pewaris (${updated.pewarisId}). Alasan: ${reason}`,
       beforeState: before,
       afterState: { status: updated.status },
+      metadata: { reason },
     });
+
+    await this.notifier.notifyPewaris(
+      updated.pewarisId,
+      'Verifikasi Aset Ditolak',
+      `Notaris menolak verifikasi aset "${updated.assetName}". Alasan: ${reason}`,
+      NotificationType.ERROR,
+    );
 
     return this.toResponseDto(updated);
   }

@@ -140,8 +140,12 @@ export class AssetOrchestrator {
     return this.verifyAssetUc.verify(id, notarisId);
   }
 
-  rejectAsset(id: string, notarisId: string): Promise<AssetResponseDto> {
-    return this.verifyAssetUc.reject(id, notarisId);
+  rejectAsset(
+    id: string,
+    notarisId: string,
+    reason: string,
+  ): Promise<AssetResponseDto> {
+    return this.verifyAssetUc.reject(id, notarisId, reason);
   }
 
   allocateAsset(
