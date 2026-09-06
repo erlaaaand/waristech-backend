@@ -63,8 +63,9 @@ import { ComplianceModule } from './module/shared/compliance/compliance.module';
           password: configService.get<string>('DB_PASSWORD'),
           database: configService.get<string>('DB_DATABASE'),
           autoLoadEntities: true,
-          // Dikembalikan ke !isProduction untuk keamanan data production
-          synchronize: !isProduction,
+          // SEMENTARA DIUBAH KE TRUE UNTUK SINKRONISASI SCHEMA DI RAILWAY (PRODUCTION)
+          // AKAN DIKEMBALIKAN KE FALSE SETELAH DEPLOYMENT SELESAI
+          synchronize: true,
           extra: {
             connectionLimit: configService.get<number>('DB_CONNECTION_LIMIT'),
           },
