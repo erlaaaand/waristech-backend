@@ -232,10 +232,11 @@ export class AuthController {
       this.getCookieOptions(7 * 24 * 60 * 60 * 1000), // 7 Hari
     );
 
-    // Mengembalikan data user (tanpa mengekspos token di JSON body)
+    // Mengembalikan data user dan accessToken untuk fallback cross-domain
     return {
       message: 'Login berhasil',
       user: result.user,
+      accessToken: result.accessToken,
     };
   }
 
@@ -362,6 +363,7 @@ export class AuthController {
     return {
       message: 'Verifikasi berhasil',
       user: result.user,
+      accessToken: result.accessToken,
     };
   }
 
@@ -504,6 +506,7 @@ export class AuthController {
     return {
       message: 'Verifikasi Magic Link berhasil',
       user: result.user,
+      accessToken: result.accessToken,
     };
   }
 }

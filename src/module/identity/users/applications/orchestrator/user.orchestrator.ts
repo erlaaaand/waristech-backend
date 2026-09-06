@@ -82,8 +82,11 @@ export class UserOrchestrator {
   }
 
   async getNotaries(): Promise<{ id: string; fullName: string }[]> {
-    const result = await this.findAllUsersUc.execute({ role: 'NOTARIS', limit: 100 });
-    return result.data.map(user => ({
+    const result = await this.findAllUsersUc.execute({
+      role: 'NOTARIS',
+      limit: 100,
+    });
+    return result.data.map((user) => ({
       id: user.id,
       fullName: user.fullName || user.email,
     }));

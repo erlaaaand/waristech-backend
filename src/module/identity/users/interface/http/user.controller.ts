@@ -206,7 +206,8 @@ export class UserController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Ambil daftar seluruh Notaris',
-    description: 'Dipakai oleh Pewaris saat mendaftarkan aset untuk memilih Notaris yang ditugaskan.',
+    description:
+      'Dipakai oleh Pewaris saat mendaftarkan aset untuk memilih Notaris yang ditugaskan.',
     operationId: 'usersGetNotaries',
   })
   @ApiOkResponse({ description: 'Daftar Notaris berhasil diambil.' })

@@ -15,9 +15,8 @@ export class GetHistoryAssetsNotarisUseCase {
   ) {}
 
   async execute(notarisId: string): Promise<AssetResponseDto[]> {
-    const historyAssets = await this.repository.findByAssignedNotarisIdAndStatuses(
-      notarisId,
-      [
+    const historyAssets =
+      await this.repository.findByAssignedNotarisIdAndStatuses(notarisId, [
         AssetStatus.VERIFIED,
         AssetStatus.REJECTED,
         AssetStatus.FROZEN,
@@ -26,8 +25,7 @@ export class GetHistoryAssetsNotarisUseCase {
         AssetStatus.DISTRIBUTED,
         AssetStatus.DISPUTED_LIQUIDATION,
         AssetStatus.CLOSED,
-      ],
-    );
+      ]);
 
     return historyAssets.map((asset) => this.toResponseDto(asset));
   }

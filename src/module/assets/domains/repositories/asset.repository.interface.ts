@@ -43,7 +43,10 @@ export interface IAssetRepository {
   findByPewarisId(pewarisId: string): Promise<AssetDomain[]>;
   findByStatus(status: AssetStatus): Promise<AssetDomain[]>;
   findByStatuses(statuses: AssetStatus[]): Promise<AssetDomain[]>;
-  findByAssignedNotarisIdAndStatuses(assignedNotarisId: string, statuses: AssetStatus[]): Promise<AssetDomain[]>;
+  findByAssignedNotarisIdAndStatuses(
+    assignedNotarisId: string,
+    statuses: AssetStatus[],
+  ): Promise<AssetDomain[]>;
   findByAhliWarisId(ahliWarisId: string): Promise<AssetDomain[]>;
   update(id: string, data: IUpdateAssetData): Promise<AssetDomain>;
   verify(id: string, notarisId: string): Promise<AssetDomain>;

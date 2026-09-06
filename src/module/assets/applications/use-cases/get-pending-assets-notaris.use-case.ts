@@ -15,10 +15,10 @@ export class GetPendingAssetsNotarisUseCase {
   ) {}
 
   async execute(notarisId: string): Promise<AssetResponseDto[]> {
-    const pendingAssets = await this.repository.findByAssignedNotarisIdAndStatuses(
-      notarisId,
-      [AssetStatus.PENDING_VERIFICATION],
-    );
+    const pendingAssets =
+      await this.repository.findByAssignedNotarisIdAndStatuses(notarisId, [
+        AssetStatus.PENDING_VERIFICATION,
+      ]);
     return pendingAssets.map((asset) => this.toResponseDto(asset));
   }
 

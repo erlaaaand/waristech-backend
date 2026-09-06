@@ -120,10 +120,15 @@ export class AssetRepository implements IAssetRepository {
     return entities.map((e) => this.toDomain(e));
   }
 
-  async findByAssignedNotarisIdAndStatuses(assignedNotarisId: string, statuses: AssetStatus[]): Promise<AssetDomain[]> {
+  async findByAssignedNotarisIdAndStatuses(
+    assignedNotarisId: string,
+    statuses: AssetStatus[],
+  ): Promise<AssetDomain[]> {
     const qb = this.assetRepo.createQueryBuilder('asset');
     qb.leftJoinAndSelect('asset.allocations', 'allocations');
-    qb.where('asset.assignedNotarisId = :assignedNotarisId', { assignedNotarisId });
+    qb.where('asset.assignedNotarisId = :assignedNotarisId', {
+      assignedNotarisId,
+    });
     qb.andWhere('asset.status IN (:...statuses)', { statuses });
     qb.orderBy('asset.createdAt', 'DESC');
 
