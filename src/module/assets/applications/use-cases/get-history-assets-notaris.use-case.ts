@@ -14,17 +14,20 @@ export class GetHistoryAssetsNotarisUseCase {
     private readonly repository: IAssetRepository,
   ) {}
 
-  async execute(): Promise<AssetResponseDto[]> {
-    const historyAssets = await this.repository.findByStatuses([
-      AssetStatus.VERIFIED,
-      AssetStatus.REJECTED,
-      AssetStatus.FROZEN,
-      AssetStatus.UNLOCKED,
-      AssetStatus.LIQUIDATING,
-      AssetStatus.DISTRIBUTED,
-      AssetStatus.DISPUTED_LIQUIDATION,
-      AssetStatus.CLOSED,
-    ]);
+  async execute(notarisId: string): Promise<AssetResponseDto[]> {
+    const historyAssets = await this.repository.findByAssignedNotarisIdAndStatuses(
+      notarisId,
+      [
+        AssetStatus.VERIFIED,
+        AssetStatus.REJECTED,
+        AssetStatus.FROZEN,
+        AssetStatus.UNLOCKED,
+        AssetStatus.LIQUIDATING,
+        AssetStatus.DISTRIBUTED,
+        AssetStatus.DISPUTED_LIQUIDATION,
+        AssetStatus.CLOSED,
+      ],
+    );
 
     return historyAssets.map((asset) => this.toResponseDto(asset));
   }
@@ -39,6 +42,7 @@ export class GetHistoryAssetsNotarisUseCase {
       accountIdentifier: asset.accountIdentifier,
       custodyType: asset.custodyType,
       status: asset.status,
+      assignedNotarisId: asset.assignedNotarisId,
       verifiedByNotarisId: asset.verifiedByNotarisId,
       verifiedAt: asset.verifiedAt,
       allocations: asset.allocations.map((a) => ({

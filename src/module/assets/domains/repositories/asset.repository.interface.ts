@@ -12,6 +12,7 @@ export interface ICreateAssetData {
   platform: string;
   accountIdentifier: string;
   custodyType: AssetCustodyType;
+  assignedNotarisId: string;
   /** @deprecated Kredensial baru disimpan via Secret Sharing (lihat IKeyShareRepository). */
   encryptedSecret?: string;
 }
@@ -21,6 +22,7 @@ export interface IUpdateAssetData {
   assetName?: string;
   platform?: string;
   accountIdentifier?: string;
+  assignedNotarisId?: string;
   encryptedSecret?: string;
   status?: AssetStatus;
   cooldownEndsAt?: Date | null;
@@ -41,6 +43,7 @@ export interface IAssetRepository {
   findByPewarisId(pewarisId: string): Promise<AssetDomain[]>;
   findByStatus(status: AssetStatus): Promise<AssetDomain[]>;
   findByStatuses(statuses: AssetStatus[]): Promise<AssetDomain[]>;
+  findByAssignedNotarisIdAndStatuses(assignedNotarisId: string, statuses: AssetStatus[]): Promise<AssetDomain[]>;
   findByAhliWarisId(ahliWarisId: string): Promise<AssetDomain[]>;
   update(id: string, data: IUpdateAssetData): Promise<AssetDomain>;
   verify(id: string, notarisId: string): Promise<AssetDomain>;

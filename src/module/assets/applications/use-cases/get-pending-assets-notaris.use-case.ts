@@ -14,9 +14,10 @@ export class GetPendingAssetsNotarisUseCase {
     private readonly repository: IAssetRepository,
   ) {}
 
-  async execute(): Promise<AssetResponseDto[]> {
-    const pendingAssets = await this.repository.findByStatus(
-      AssetStatus.PENDING_VERIFICATION,
+  async execute(notarisId: string): Promise<AssetResponseDto[]> {
+    const pendingAssets = await this.repository.findByAssignedNotarisIdAndStatuses(
+      notarisId,
+      [AssetStatus.PENDING_VERIFICATION],
     );
     return pendingAssets.map((asset) => this.toResponseDto(asset));
   }
@@ -31,6 +32,7 @@ export class GetPendingAssetsNotarisUseCase {
       accountIdentifier: asset.accountIdentifier,
       custodyType: asset.custodyType,
       status: asset.status,
+      assignedNotarisId: asset.assignedNotarisId,
       verifiedByNotarisId: asset.verifiedByNotarisId,
       verifiedAt: asset.verifiedAt,
       allocations: asset.allocations.map((a) => ({

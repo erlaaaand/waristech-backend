@@ -54,6 +54,7 @@ export class CreateAssetUseCase {
       assetName: dto.assetName,
       platform: dto.platform,
       accountIdentifier: dto.accountIdentifier,
+      assignedNotarisId: dto.assignedNotarisId,
       custodyType,
     });
 
@@ -143,6 +144,7 @@ export class CreateAssetUseCase {
       accountIdentifier: asset.accountIdentifier,
       custodyType: asset.custodyType,
       status: asset.status,
+      assignedNotarisId: asset.assignedNotarisId,
       verifiedByNotarisId: asset.verifiedByNotarisId,
       verifiedAt: asset.verifiedAt,
       allocations: asset.allocations.map((a) => ({

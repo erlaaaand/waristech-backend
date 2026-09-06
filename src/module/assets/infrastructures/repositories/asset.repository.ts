@@ -56,6 +56,7 @@ export class AssetRepository implements IAssetRepository {
       entity.encryptedSecret,
       entity.custodyType,
       entity.status,
+      entity.assignedNotarisId,
       entity.verifiedByNotarisId,
       entity.verifiedAt,
       entity.cooldownEndsAt,
@@ -75,6 +76,7 @@ export class AssetRepository implements IAssetRepository {
       platform: data.platform,
       accountIdentifier: data.accountIdentifier,
       custodyType: data.custodyType,
+      assignedNotarisId: data.assignedNotarisId,
       encryptedSecret: data.encryptedSecret ?? '',
       status: AssetStatus.PENDING_VERIFICATION,
     });
@@ -112,6 +114,17 @@ export class AssetRepository implements IAssetRepository {
     const qb = this.assetRepo.createQueryBuilder('asset');
     qb.leftJoinAndSelect('asset.allocations', 'allocations');
     qb.where('asset.status IN (:...statuses)', { statuses });
+    qb.orderBy('asset.createdAt', 'DESC');
+
+    const entities = await qb.getMany();
+    return entities.map((e) => this.toDomain(e));
+  }
+
+  async findByAssignedNotarisIdAndStatuses(assignedNotarisId: string, statuses: AssetStatus[]): Promise<AssetDomain[]> {
+    const qb = this.assetRepo.createQueryBuilder('asset');
+    qb.leftJoinAndSelect('asset.allocations', 'allocations');
+    qb.where('asset.assignedNotarisId = :assignedNotarisId', { assignedNotarisId });
+    qb.andWhere('asset.status IN (:...statuses)', { statuses });
     qb.orderBy('asset.createdAt', 'DESC');
 
     const entities = await qb.getMany();

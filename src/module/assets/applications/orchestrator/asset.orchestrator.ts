@@ -112,12 +112,12 @@ export class AssetOrchestrator {
     return this.getMyAssetsUc.execute(pewarisId);
   }
 
-  listPendingForNotaris(): Promise<AssetResponseDto[]> {
-    return this.getPendingAssetsNotarisUc.execute();
+  listPendingForNotaris(notarisId: string): Promise<AssetResponseDto[]> {
+    return this.getPendingAssetsNotarisUc.execute(notarisId);
   }
 
-  listHistoryForNotaris(): Promise<AssetResponseDto[]> {
-    return this.getHistoryAssetsNotarisUc.execute();
+  listHistoryForNotaris(notarisId: string): Promise<AssetResponseDto[]> {
+    return this.getHistoryAssetsNotarisUc.execute(notarisId);
   }
 
   listAllocatedForAhliWaris(ahliWarisId: string): Promise<AssetResponseDto[]> {

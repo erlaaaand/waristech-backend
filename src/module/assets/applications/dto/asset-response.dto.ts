@@ -30,6 +30,7 @@ export class AssetResponseDto {
   })
   custodyType!: AssetCustodyType;
   @ApiProperty({ enum: AssetStatus }) status!: AssetStatus;
+  @ApiProperty({ nullable: true }) assignedNotarisId!: string | null;
   @ApiProperty({ nullable: true }) verifiedByNotarisId!: string | null;
   @ApiProperty({ nullable: true }) verifiedAt!: Date | null;
   @ApiProperty({ type: [AssetAllocationResponseDto] })

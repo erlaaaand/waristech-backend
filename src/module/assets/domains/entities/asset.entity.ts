@@ -20,6 +20,7 @@ export class AssetDomain {
     private readonly encryptedSecret: string,
     public readonly custodyType: AssetCustodyType,
     public readonly status: AssetStatus,
+    public readonly assignedNotarisId: string | null,
     public readonly verifiedByNotarisId: string | null,
     public readonly verifiedAt: Date | null,
     public readonly cooldownEndsAt: Date | null,

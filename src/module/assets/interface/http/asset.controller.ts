@@ -248,8 +248,10 @@ export class AssetController {
     operationId: 'assetsListPendingNotaris',
   })
   @ApiOkResponse({ type: [AssetResponseDto] })
-  listPendingForNotaris(): Promise<AssetResponseDto[]> {
-    return this.orchestrator.listPendingForNotaris();
+  listPendingForNotaris(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<AssetResponseDto[]> {
+    return this.orchestrator.listPendingForNotaris(user.sub);
   }
 
   // ── GET /assets/notaris/history ──────────────────────────────────────────
@@ -263,8 +265,10 @@ export class AssetController {
     operationId: 'assetsListHistoryNotaris',
   })
   @ApiOkResponse({ type: [AssetResponseDto] })
-  listHistoryForNotaris(): Promise<AssetResponseDto[]> {
-    return this.orchestrator.listHistoryForNotaris();
+  listHistoryForNotaris(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<AssetResponseDto[]> {
+    return this.orchestrator.listHistoryForNotaris(user.sub);
   }
 
   // ── GET /assets/notaris/liquidation-reviews ──────────────────────────────

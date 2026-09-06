@@ -199,6 +199,21 @@ export class UserController {
     return this.orchestrator.registerPublicKey(user.sub, dto);
   }
 
+  // ── GET /users/notaries ────────────────────────────────────────────────────
+
+  @SkipThrottle()
+  @Get('notaries')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Ambil daftar seluruh Notaris',
+    description: 'Dipakai oleh Pewaris saat mendaftarkan aset untuk memilih Notaris yang ditugaskan.',
+    operationId: 'usersGetNotaries',
+  })
+  @ApiOkResponse({ description: 'Daftar Notaris berhasil diambil.' })
+  async getNotaries(): Promise<{ id: string; fullName: string }[]> {
+    return this.orchestrator.getNotaries();
+  }
+
   // ── GET /users/notaris/:id/public-key ──────────────────────────────────────
 
   @SkipThrottle()

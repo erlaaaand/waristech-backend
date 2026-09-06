@@ -61,6 +61,11 @@ export class CreateAssetDto {
   @MaxLength(255)
   accountIdentifier!: string;
 
+  @ApiProperty({ example: 'uuid-notaris', description: 'ID Notaris yang dipilih untuk memverifikasi aset ini' })
+  @IsString()
+  @IsNotEmpty()
+  assignedNotarisId!: string;
+
   @ApiPropertyOptional({
     enum: AssetCustodyType,
     default: AssetCustodyType.VAULT,

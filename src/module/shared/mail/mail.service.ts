@@ -58,7 +58,10 @@ export class MailService implements OnModuleInit {
     const user = this.configService.get<string>('EMAIL_USER') || '';
 
     // Hanya lakukan verifikasi jika menggunakan SMTP standar
-    if (!(host.includes('mailtrap') && user === 'api') && typeof this.transporter.verify === 'function') {
+    if (
+      !(host.includes('mailtrap') && user === 'api') &&
+      typeof this.transporter.verify === 'function'
+    ) {
       try {
         const verifyPromise = this.transporter.verify();
         if (verifyPromise && typeof verifyPromise.then === 'function') {
@@ -67,14 +70,22 @@ export class MailService implements OnModuleInit {
               this.logger.log('✅ SMTP connection berhasil.');
             })
             .catch((err: unknown) => {
-              this.logger.error('SMTP Verify Error', err instanceof Error ? err.stack : String(err));
+              this.logger.error(
+                'SMTP Verify Error',
+                err instanceof Error ? err.stack : String(err),
+              );
             });
         }
       } catch (err: unknown) {
-        this.logger.error('SMTP Verify Error (Sync)', err instanceof Error ? err.stack : String(err));
+        this.logger.error(
+          'SMTP Verify Error (Sync)',
+          err instanceof Error ? err.stack : String(err),
+        );
       }
     } else {
-      this.logger.log('✅ Mailtrap API connection diinisialisasi (Verify SMTP di-skip).');
+      this.logger.log(
+        '✅ Mailtrap API connection diinisialisasi (Verify SMTP di-skip).',
+      );
     }
   }
 

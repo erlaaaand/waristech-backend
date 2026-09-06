@@ -54,6 +54,9 @@ export class AssetTypeOrmEntity {
   status: AssetStatus = AssetStatus.PENDING_VERIFICATION;
 
   @Column({ type: 'varchar', length: 36, nullable: true })
+  assignedNotarisId: string | null = null;
+
+  @Column({ type: 'varchar', length: 36, nullable: true })
   verifiedByNotarisId: string | null = null;
 
   @Column({ type: 'timestamp', nullable: true })

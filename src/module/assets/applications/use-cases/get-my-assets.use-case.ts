@@ -28,6 +28,7 @@ export class GetMyAssetsUseCase {
       accountIdentifier: asset.accountIdentifier,
       custodyType: asset.custodyType,
       status: asset.status,
+      assignedNotarisId: asset.assignedNotarisId,
       verifiedByNotarisId: asset.verifiedByNotarisId,
       verifiedAt: asset.verifiedAt,
       allocations: asset.allocations.map((a) => ({
