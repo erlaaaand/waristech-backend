@@ -21,6 +21,8 @@ import { UserRole } from '../../../identity/users/domains/entities/user.entity';
 import { CheckInUseCase } from '../../applications/use-cases/check-in.use-case';
 import { GetStatusUseCase } from '../../applications/use-cases/get-status.use-case';
 import { ProofOfLifeStatusDto } from '../../applications/dto/proof-of-life-status.dto';
+import { Audit } from '../../../shared/audit/decorators/audit.decorator';
+import { AuditCategory, AuditSeverity } from '../../../shared/audit/domains/enums/audit.enum';
 
 @ApiTags('Proof-of-Life')
 @ApiBearerAuth('JWT')
@@ -64,6 +66,13 @@ export class ProofOfLifeController {
     operationId: 'proofOfLifeCheckIn',
   })
   @ApiOkResponse({ description: 'Check-in berhasil dicatat.' })
+  @Audit({
+    action: 'PROOF_OF_LIFE_CHECK_IN',
+    category: AuditCategory.SYSTEM,
+    severity: AuditSeverity.INFO,
+    resource: 'ProofOfLife',
+    description: 'Pewaris melakukan check-in Proof of Life',
+  })
   async checkIn(
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<{ message: string }> {
