@@ -48,6 +48,12 @@ import { SubmitWitnessDecisionDto } from '../../applications/dto/submit-witness-
 import { RegisterWitnessDto } from '../../applications/dto/register-witness.dto';
 import { SubmitDeathCertificateDto } from '../../applications/dto/submit-death-certificate.dto';
 import { InheritanceOrchestrator } from '../../applications/orchestrator/inheritance.orchestrator';
+import { Audit } from '../../../shared/audit/decorators/audit.decorator';
+import {
+  AuditAction,
+  AuditCategory,
+  AuditSeverity,
+} from '../../../shared/audit/domains/enums/audit.enum';
 
 @ApiTags('Inheritance - Waris')
 @ApiBearerAuth('JWT')
@@ -81,6 +87,13 @@ export class InheritanceController {
   @ApiCreatedResponse({ type: InvitationResponseDto })
   @ApiForbiddenResponse({
     description: 'Hanya Pewaris yang dapat membuat undangan.',
+  })
+  @Audit({
+    action: AuditAction.FAMILY_MEMBER_INVITED,
+    category: AuditCategory.WARIS_FAMILY,
+    severity: AuditSeverity.INFO,
+    resource: 'FamilyMember',
+    description: 'Pewaris membuat kode undangan untuk ahli waris',
   })
   async generateInvitation(
     @CurrentUser() user: AuthenticatedUser,
@@ -179,6 +192,13 @@ export class InheritanceController {
   @ApiNotFoundResponse({
     description: 'Data anggota keluarga tidak ditemukan.',
   })
+  @Audit({
+    action: AuditAction.FAMILY_MEMBER_CONFIRMED,
+    category: AuditCategory.WARIS_FAMILY,
+    severity: AuditSeverity.INFO,
+    resource: 'FamilyMember',
+    description: 'Pewaris mengonfirmasi ahli waris',
+  })
   async confirmFamilyMember(
     @Param('id', new ParseUUIDPipe()) id: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -199,6 +219,13 @@ export class InheritanceController {
   })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiOkResponse({ type: FamilyMemberResponseDto })
+  @Audit({
+    action: AuditAction.FAMILY_MEMBER_VERIFIED,
+    category: AuditCategory.WARIS_FAMILY,
+    severity: AuditSeverity.INFO,
+    resource: 'FamilyMember',
+    description: 'Notaris memverifikasi ahli waris non-nasab',
+  })
   async verifyFamilyMember(
     @Param('id', new ParseUUIDPipe()) id: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -219,6 +246,13 @@ export class InheritanceController {
   })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiOkResponse({ type: FamilyMemberResponseDto })
+  @Audit({
+    action: AuditAction.FAMILY_MEMBER_REJECTED,
+    category: AuditCategory.WARIS_FAMILY,
+    severity: AuditSeverity.INFO,
+    resource: 'FamilyMember',
+    description: 'Notaris menolak ahli waris non-nasab',
+  })
   async rejectFamilyMember(
     @Param('id', new ParseUUIDPipe()) id: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -238,6 +272,13 @@ export class InheritanceController {
     operationId: 'inheritanceSubmitWitnessDecision',
   })
   @ApiOkResponse({ description: 'Keputusan berhasil disimpan.' })
+  @Audit({
+    action: AuditAction.INHERITANCE_VERIFICATION_APPROVED,
+    category: AuditCategory.WARIS_FAMILY,
+    severity: AuditSeverity.INFO,
+    resource: 'Witness',
+    description: 'Saksi mensubmit keputusan (APPROVE/DISPUTE)',
+  })
   async submitWitnessDecision(
     @Body() dto: SubmitWitnessDecisionDto,
     @CurrentUser() user: AuthenticatedUser,
@@ -257,6 +298,13 @@ export class InheritanceController {
     operationId: 'inheritanceRegisterWitness',
   })
   @ApiCreatedResponse({ type: WitnessResponseDto })
+  @Audit({
+    action: AuditAction.USER_UPDATE,
+    category: AuditCategory.WARIS_FAMILY,
+    severity: AuditSeverity.INFO,
+    resource: 'Witness',
+    description: 'Pewaris mendaftarkan saksi',
+  })
   async registerWitness(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: RegisterWitnessDto,
@@ -292,6 +340,13 @@ export class InheritanceController {
     operationId: 'inheritanceSubmitDeathCertificate',
   })
   @ApiCreatedResponse({ type: DeathVerificationResponseDto })
+  @Audit({
+    action: AuditAction.PROOF_OF_LIFE_FORMAL_VERIFICATION_TRIGGERED,
+    category: AuditCategory.WARIS_FAMILY,
+    severity: AuditSeverity.WARNING,
+    resource: 'DeathCertificate',
+    description: 'Pengajuan dokumen akta kematian',
+  })
   async submitDeathCertificate(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: SubmitDeathCertificateDto,
@@ -312,6 +367,13 @@ export class InheritanceController {
   })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiOkResponse({ type: DeathVerificationResponseDto })
+  @Audit({
+    action: AuditAction.INHERITANCE_VERIFICATION_APPROVED,
+    category: AuditCategory.WARIS_FAMILY,
+    severity: AuditSeverity.INFO,
+    resource: 'DeathCertificate',
+    description: 'Notaris memverifikasi akta kematian',
+  })
   async verifyDeathCertificate(
     @Param('id', new ParseUUIDPipe()) id: string,
     @CurrentUser() user: AuthenticatedUser,

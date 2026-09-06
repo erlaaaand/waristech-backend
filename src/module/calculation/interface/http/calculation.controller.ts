@@ -31,6 +31,12 @@ import { DashboardResponseDto } from '../../applications/dto/dashboard-response.
 import { SetCalculationPreferenceDto } from '../../applications/dto/set-calculation-preference.dto';
 import { CalculationMethod } from '../../domains/enums/calculation.enum';
 import { CalculationOrchestrator } from '../../applications/orchestrator/calculation.orchestrator';
+import { Audit } from '../../../shared/audit/decorators/audit.decorator';
+import {
+  AuditAction,
+  AuditCategory,
+  AuditSeverity,
+} from '../../../shared/audit/domains/enums/audit.enum';
 
 @ApiTags('Calculation - Kalkulator Waris')
 @ApiBearerAuth('JWT')
@@ -97,6 +103,13 @@ export class CalculationController {
     schema: {
       example: { preferredCalculationMethod: 'FARAIDH' },
     },
+  })
+  @Audit({
+    action: AuditAction.USER_UPDATE,
+    category: AuditCategory.WARIS_CALCULATION,
+    severity: AuditSeverity.INFO,
+    resource: 'CalculationPreference',
+    description: 'Pewaris menetapkan preferensi skema hukum waris',
   })
   setPreference(
     @CurrentUser() user: AuthenticatedUser,

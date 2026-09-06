@@ -29,6 +29,12 @@ import {
   type MyConsentResponse,
 } from '../../applications/use-cases/get-my-consent.use-case';
 import { GrantConsentUseCase } from '../../applications/use-cases/grant-consent.use-case';
+import { Audit } from '../../../../shared/audit/decorators/audit.decorator';
+import {
+  AuditAction,
+  AuditCategory,
+  AuditSeverity,
+} from '../../../../shared/audit/domains/enums/audit.enum';
 
 @ApiTags('Compliance - Pelindungan Data Pribadi (UU PDP)')
 @ApiBearerAuth('JWT')
@@ -89,6 +95,13 @@ export class ComplianceController {
       },
     },
   })
+  @Audit({
+    action: AuditAction.CONSENT_GRANTED,
+    category: AuditCategory.SYSTEM,
+    severity: AuditSeverity.INFO,
+    resource: 'Compliance',
+    description: 'Pengguna memberikan persetujuan kebijakan privasi',
+  })
   grantConsent(
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<{ consentGivenAt: Date; consentVersion: string }> {
@@ -118,6 +131,13 @@ export class ComplianceController {
     },
   })
   @ApiForbiddenResponse({ description: 'Akses ditolak. Hanya untuk Admin.' })
+  @Audit({
+    action: AuditAction.DATA_BREACH_REPORTED,
+    category: AuditCategory.SYSTEM,
+    severity: AuditSeverity.CRITICAL,
+    resource: 'Compliance',
+    description: 'Admin melaporkan insiden kegagalan pelindungan data',
+  })
   reportDataBreach(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: ReportDataBreachDto,

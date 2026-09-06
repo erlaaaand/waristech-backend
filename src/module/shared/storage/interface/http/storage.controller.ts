@@ -37,6 +37,12 @@ import { FileSizeGuard } from '../guards/file-size.guard';
 import { JwtAuthGuard } from '../../../../identity/auth/interface/guards/jwt-auth.guard';
 import { CurrentUser } from '../../../../identity/auth/interface/decorators/current-user.decorator';
 import { FilePurpose } from '../../domains/entities/stored-file.entity';
+import { Audit } from '../../../../shared/audit/decorators/audit.decorator';
+import {
+  AuditAction,
+  AuditCategory,
+  AuditSeverity,
+} from '../../../../shared/audit/domains/enums/audit.enum';
 
 @ApiTags('Storage')
 @ApiBearerAuth('JWT')
@@ -126,6 +132,13 @@ export class StorageController {
       },
     },
   })
+  @Audit({
+    action: AuditAction.FILE_UPLOADED,
+    category: AuditCategory.SYSTEM,
+    severity: AuditSeverity.INFO,
+    resource: 'Storage',
+    description: 'Upload file media/dokumen',
+  })
   upload(
     @UploadedFile() file: Express.Multer.File | undefined,
     @Body() dto: UploadFileDto,
@@ -154,6 +167,13 @@ export class StorageController {
   @ApiNotFoundResponse({ description: 'Data file tidak ditemukan.' })
   @ApiForbiddenResponse({
     description: 'Anda tidak memiliki hak akses untuk file ini.',
+  })
+  @Audit({
+    action: AuditAction.FILE_DELETED,
+    category: AuditCategory.SYSTEM,
+    severity: AuditSeverity.INFO,
+    resource: 'Storage',
+    description: 'Hapus file secara permanen',
   })
   async delete(
     @Param('id', new ParseUUIDPipe()) id: string,

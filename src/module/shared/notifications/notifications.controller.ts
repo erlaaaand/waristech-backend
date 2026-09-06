@@ -10,6 +10,12 @@ import {
 import { CurrentUser } from '../../identity/auth/interface/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../../identity/auth/domains/entities/jwt-payload.entity';
 import { NotificationEntity } from './entities/notification.entity';
+import { Audit } from '../audit/decorators/audit.decorator';
+import {
+  AuditAction,
+  AuditCategory,
+  AuditSeverity,
+} from '../audit/domains/enums/audit.enum';
 
 @ApiTags('Notifications')
 @ApiBearerAuth('JWT')
@@ -32,6 +38,13 @@ export class NotificationsController {
   @Patch(':id/read')
   @ApiOperation({ summary: 'Tandai satu notifikasi sebagai telah dibaca' })
   @ApiOkResponse({ description: 'Notifikasi berhasil ditandai telah dibaca.' })
+  @Audit({
+    action: AuditAction.USER_UPDATE,
+    category: AuditCategory.SYSTEM,
+    severity: AuditSeverity.INFO,
+    resource: 'Notification',
+    description: 'Tandai satu notifikasi telah dibaca',
+  })
   async markAsRead(
     @Param('id') id: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -44,6 +57,13 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Tandai semua notifikasi sebagai telah dibaca' })
   @ApiOkResponse({
     description: 'Semua notifikasi berhasil ditandai telah dibaca.',
+  })
+  @Audit({
+    action: AuditAction.USER_UPDATE,
+    category: AuditCategory.SYSTEM,
+    severity: AuditSeverity.INFO,
+    resource: 'Notification',
+    description: 'Tandai semua notifikasi telah dibaca',
   })
   async markAllAsRead(
     @CurrentUser() user: AuthenticatedUser,

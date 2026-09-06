@@ -284,6 +284,13 @@ export class AuthController {
   @ApiUnauthorizedResponse({
     description: 'Token tidak valid atau sudah expired',
   })
+  @Audit({
+    action: AuditAction.AUTH_LOGOUT,
+    category: AuditCategory.AUTH,
+    severity: AuditSeverity.INFO,
+    resource: 'User',
+    description: 'User logout',
+  })
   async logout(
     @CurrentUser() user: AuthenticatedUser,
     @Res({ passthrough: true }) res: Response,
@@ -332,6 +339,13 @@ export class AuthController {
     },
   })
   @ApiBody({ type: VerifyEmailDto })
+  @Audit({
+    action: AuditAction.AUTH_VERIFY_EMAIL,
+    category: AuditCategory.AUTH,
+    severity: AuditSeverity.INFO,
+    resource: 'User',
+    description: 'Verifikasi email menggunakan OTP',
+  })
   async verifyEmail(
     @Body() dto: VerifyEmailDto,
     @Res({ passthrough: true }) res: Response,
@@ -362,6 +376,13 @@ export class AuthController {
   })
   @ApiOkResponse({ description: 'OTP berhasil dikirim.' })
   @ApiBadRequestResponse({ description: 'Email tidak valid.' })
+  @Audit({
+    action: AuditAction.AUTH_PASSWORD_RESET_REQUEST,
+    category: AuditCategory.AUTH,
+    severity: AuditSeverity.INFO,
+    resource: 'User',
+    description: 'Request OTP lupa password',
+  })
   async forgotPassword(
     @Body() dto: ForgotPasswordDto,
   ): Promise<{ message: string }> {
@@ -380,6 +401,13 @@ export class AuthController {
   @ApiOkResponse({ description: 'Password berhasil diubah.' })
   @ApiBadRequestResponse({
     description: 'OTP salah atau format password tidak valid.',
+  })
+  @Audit({
+    action: AuditAction.AUTH_PASSWORD_RESET_SUCCESS,
+    category: AuditCategory.AUTH,
+    severity: AuditSeverity.INFO,
+    resource: 'User',
+    description: 'Reset password menggunakan OTP',
   })
   async resetPassword(
     @Body() dto: ResetPasswordDto,
@@ -400,6 +428,13 @@ export class AuthController {
   @ApiBadRequestResponse({
     description: 'Email tidak ditemukan atau sudah diverifikasi.',
   })
+  @Audit({
+    action: AuditAction.AUTH_VERIFY_EMAIL,
+    category: AuditCategory.AUTH,
+    severity: AuditSeverity.INFO,
+    resource: 'User',
+    description: 'Resend OTP verifikasi',
+  })
   async resendOtp(@Body() dto: ResendOtpDto): Promise<{ message: string }> {
     return this.orchestrator.resendOtp(dto);
   }
@@ -414,6 +449,13 @@ export class AuthController {
     operationId: 'authGenerateMagicLink',
   })
   @ApiOkResponse({ description: 'Magic link berhasil digenerate.' })
+  @Audit({
+    action: AuditAction.AUTH_LOGIN,
+    category: AuditCategory.AUTH,
+    severity: AuditSeverity.INFO,
+    resource: 'User',
+    description: 'Generate magic link untuk Guest',
+  })
   async generateMagicLink(
     @Body() dto: GenerateMagicLinkDto,
   ): Promise<{ message: string }> {
@@ -438,6 +480,13 @@ export class AuthController {
     type: AuthSessionResponseDto,
     description:
       'Verifikasi berhasil. Sesi Guest dibuat via cookie HttpOnly `accessToken`.',
+  })
+  @Audit({
+    action: AuditAction.AUTH_LOGIN,
+    category: AuditCategory.AUTH,
+    severity: AuditSeverity.INFO,
+    resource: 'User',
+    description: 'Guest login dengan magic link & OTP',
   })
   async verifyMagicLink(
     @Body() dto: VerifyMagicLinkOtpDto,

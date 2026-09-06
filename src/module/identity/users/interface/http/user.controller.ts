@@ -155,6 +155,13 @@ export class UserController {
   })
   @ApiUnauthorizedResponse({ description: 'Token tidak ada atau tidak valid.' })
   @ApiBadRequestResponse({ description: 'avatarUrl tidak valid / kosong.' })
+  @Audit({
+    action: AuditAction.USER_UPDATE,
+    category: AuditCategory.SYSTEM,
+    severity: AuditSeverity.INFO,
+    resource: 'User',
+    description: 'Update foto profil user',
+  })
   async updateAvatar(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: UpdateAvatarDto,
@@ -178,6 +185,13 @@ export class UserController {
   })
   @ApiOkResponse({ description: 'Public key berhasil didaftarkan.' })
   @ApiBadRequestResponse({ description: 'Format public key tidak valid.' })
+  @Audit({
+    action: AuditAction.USER_UPDATE,
+    category: AuditCategory.SYSTEM,
+    severity: AuditSeverity.INFO,
+    resource: 'User',
+    description: 'Pendaftaran public key Notaris',
+  })
   async registerPublicKey(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: RegisterPublicKeyDto,
@@ -274,6 +288,13 @@ export class UserController {
   @ApiNotFoundResponse({ description: 'User tidak ditemukan.' })
   @ApiBadRequestResponse({
     description: 'Validasi gagal — field tidak sesuai ketentuan.',
+  })
+  @Audit({
+    action: AuditAction.USER_UPDATE,
+    category: AuditCategory.SYSTEM,
+    severity: AuditSeverity.INFO,
+    resource: 'User',
+    description: 'Update profil pengguna',
   })
   async update(
     @Param('id', new ParseUUIDPipe()) id: string,

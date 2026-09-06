@@ -47,6 +47,12 @@ import { RequestLegalFallbackDto } from '../../applications/dto/request-legal-fa
 import { ReviewLiquidationProofDto } from '../../applications/dto/review-liquidation-proof.dto';
 import { LiquidationProofResponseDto } from '../../applications/dto/liquidation-proof-response.dto';
 import { AssetOrchestrator } from '../../applications/orchestrator/asset.orchestrator';
+import { Audit } from '../../../shared/audit/decorators/audit.decorator';
+import {
+  AuditAction,
+  AuditCategory,
+  AuditSeverity,
+} from '../../../shared/audit/domains/enums/audit.enum';
 
 @ApiTags('Assets - Harta Warisan')
 @ApiBearerAuth('JWT')
@@ -77,6 +83,13 @@ export class AssetController {
   @ApiForbiddenResponse({
     description: 'Hanya Pewaris yang dapat menambahkan harta.',
   })
+  @Audit({
+    action: AuditAction.ASSET_CREATED,
+    category: AuditCategory.WARIS_ASSET,
+    severity: AuditSeverity.INFO,
+    resource: 'Asset',
+    description: 'Pewaris mendaftarkan harta warisan baru',
+  })
   createAsset(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateAssetDto,
@@ -100,6 +113,13 @@ export class AssetController {
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiCreatedResponse({
     description: 'Bagian kunci Notaris berhasil dititipkan.',
+  })
+  @Audit({
+    action: AuditAction.NOTARIS_SHARE_ESCROWED,
+    category: AuditCategory.WARIS_ASSET,
+    severity: AuditSeverity.INFO,
+    resource: 'Asset',
+    description: 'Penitipan bagian kunci Notaris (terenkripsi)',
   })
   escrowNotarisShare(
     @Param('id', new ParseUUIDPipe()) id: string,
@@ -127,6 +147,13 @@ export class AssetController {
   })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiOkResponse({ description: 'Bagian kunci berhasil dirotasi.' })
+  @Audit({
+    action: AuditAction.KEY_SHARES_ROTATED,
+    category: AuditCategory.WARIS_ASSET,
+    severity: AuditSeverity.INFO,
+    resource: 'Asset',
+    description: 'Rotasi bagian kunci aset',
+  })
   rotateKeyShares(
     @Param('id', new ParseUUIDPipe()) id: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -153,6 +180,13 @@ export class AssetController {
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiOkResponse({
     description: 'Permohonan tercatat beserta panduan jalur resmi.',
+  })
+  @Audit({
+    action: AuditAction.LEGAL_FALLBACK_REQUESTED,
+    category: AuditCategory.WARIS_ASSET,
+    severity: AuditSeverity.WARNING,
+    resource: 'Asset',
+    description: 'Pengajuan jalur hukum konvensional',
   })
   requestLegalFallback(
     @Param('id', new ParseUUIDPipe()) id: string,
@@ -266,6 +300,13 @@ export class AssetController {
   })
   @ApiParam({ name: 'proofId', type: 'string', format: 'uuid' })
   @ApiOkResponse({ description: 'Keputusan tinjauan berhasil dicatat.' })
+  @Audit({
+    action: AuditAction.ASSET_UPDATED,
+    category: AuditCategory.WARIS_ASSET,
+    severity: AuditSeverity.INFO,
+    resource: 'Asset',
+    description: 'Notaris meninjau bukti pencairan',
+  })
   reviewLiquidationProof(
     @Param('proofId', new ParseUUIDPipe({ version: '4' })) proofId: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -305,6 +346,13 @@ export class AssetController {
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiOkResponse({ type: AssetResponseDto })
   @ApiNotFoundResponse({ description: 'Aset tidak ditemukan.' })
+  @Audit({
+    action: AuditAction.ASSET_UPDATED,
+    category: AuditCategory.WARIS_ASSET,
+    severity: AuditSeverity.INFO,
+    resource: 'Asset',
+    description: 'Pewaris mengupdate detail harta warisan',
+  })
   updateAsset(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -325,6 +373,13 @@ export class AssetController {
     operationId: 'assetsDelete',
   })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
+  @Audit({
+    action: AuditAction.ASSET_DELETED,
+    category: AuditCategory.WARIS_ASSET,
+    severity: AuditSeverity.INFO,
+    resource: 'Asset',
+    description: 'Pewaris menghapus harta warisan',
+  })
   deleteAsset(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -345,6 +400,13 @@ export class AssetController {
   })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiOkResponse({ type: AssetResponseDto })
+  @Audit({
+    action: AuditAction.ASSET_VERIFIED,
+    category: AuditCategory.WARIS_ASSET,
+    severity: AuditSeverity.INFO,
+    resource: 'Asset',
+    description: 'Notaris memverifikasi harta warisan',
+  })
   verifyAsset(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -364,6 +426,13 @@ export class AssetController {
   })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiOkResponse({ type: AssetResponseDto })
+  @Audit({
+    action: AuditAction.ASSET_REJECTED,
+    category: AuditCategory.WARIS_ASSET,
+    severity: AuditSeverity.INFO,
+    resource: 'Asset',
+    description: 'Notaris menolak verifikasi harta warisan',
+  })
   rejectAsset(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -384,6 +453,13 @@ export class AssetController {
   })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiOkResponse({ type: AssetAllocationResponseDto })
+  @Audit({
+    action: AuditAction.ASSET_UPDATED,
+    category: AuditCategory.WARIS_ASSET,
+    severity: AuditSeverity.INFO,
+    resource: 'Asset',
+    description: 'Pewaris mengalokasikan aset ke ahli waris',
+  })
   allocateAsset(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -411,6 +487,13 @@ export class AssetController {
   @ApiOkResponse({
     description: 'Bagian kunci berhasil diserahkan ke Eksekutor',
   })
+  @Audit({
+    action: AuditAction.VAULT_SHARE_RELEASED,
+    category: AuditCategory.WARIS_ASSET,
+    severity: AuditSeverity.WARNING,
+    resource: 'Asset',
+    description: 'Eksekutor mengambil bagian kunci brankas',
+  })
   unlockAsset(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -431,6 +514,13 @@ export class AssetController {
   })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiOkResponse({ description: 'Bukti pencairan berhasil diunggah' })
+  @Audit({
+    action: AuditAction.LIQUIDATION_PROOF_UPLOADED,
+    category: AuditCategory.WARIS_ASSET,
+    severity: AuditSeverity.INFO,
+    resource: 'Asset',
+    description: 'Eksekutor mengunggah bukti pencairan',
+  })
   uploadLiquidationProof(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -452,6 +542,13 @@ export class AssetController {
   })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiOkResponse({ description: 'Konfirmasi penerimaan dicatat' })
+  @Audit({
+    action: AuditAction.ASSET_UPDATED,
+    category: AuditCategory.WARIS_ASSET,
+    severity: AuditSeverity.INFO,
+    resource: 'Asset',
+    description: 'Ahli Waris mengonfirmasi penerimaan dana',
+  })
   acknowledgeDistribution(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -477,6 +574,13 @@ export class AssetController {
   @ApiConflictResponse({
     description:
       "Masih ada ahli waris yang belum acknowledge dan 'reason' tidak diisi.",
+  })
+  @Audit({
+    action: AuditAction.ASSET_FORCE_CLOSED,
+    category: AuditCategory.WARIS_ASSET,
+    severity: AuditSeverity.WARNING,
+    resource: 'Asset',
+    description: 'Notaris menutup kasus aset',
   })
   closeAsset(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
