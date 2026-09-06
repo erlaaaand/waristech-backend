@@ -54,23 +54,27 @@ export class MailService implements OnModuleInit {
   }
 
   onModuleInit(): void {
-    if (this.transporter.verify) {
-      this.transporter
-        .verify()
-        .then(() => {
-          this.logger.log('✅ SMTP / Mail connection berhasil.');
-        })
-        .catch((err: unknown) => {
-          if (err instanceof Error) {
-            this.logger.error(`Mail Verify Error: ${err.message}`, err.stack);
-          } else {
-            this.logger.error('Mail Verify Error', String(err));
-          }
-        });
+    const host = this.configService.get<string>('EMAIL_HOST') || '';
+    const user = this.configService.get<string>('EMAIL_USER') || '';
+
+    // Hanya lakukan verifikasi jika menggunakan SMTP standar
+    if (!(host.includes('mailtrap') && user === 'api') && typeof this.transporter.verify === 'function') {
+      try {
+        const verifyPromise = this.transporter.verify();
+        if (verifyPromise && typeof verifyPromise.then === 'function') {
+          verifyPromise
+            .then(() => {
+              this.logger.log('✅ SMTP connection berhasil.');
+            })
+            .catch((err: unknown) => {
+              this.logger.error('SMTP Verify Error', err instanceof Error ? err.stack : String(err));
+            });
+        }
+      } catch (err: unknown) {
+        this.logger.error('SMTP Verify Error (Sync)', err instanceof Error ? err.stack : String(err));
+      }
     } else {
-      this.logger.log(
-        '✅ Mailtrap API connection diinisialisasi (Verify di-skip).',
-      );
+      this.logger.log('✅ Mailtrap API connection diinisialisasi (Verify SMTP di-skip).');
     }
   }
 
