@@ -18,6 +18,8 @@ import {
   type PaginatedResult,
 } from '../../domains/repositories/user.repository.interface';
 import { AuthenticatedUser } from '../../../auth/domains/entities/jwt-payload.entity';
+import { EntityManager } from 'typeorm';
+import { AuditLogService } from '../../../shared/audit/applications/services/audit-log.service';
 
 @Injectable()
 export class UserOrchestrator {
@@ -31,6 +33,8 @@ export class UserOrchestrator {
     private readonly findAllUsersUc: FindAllUsersUseCase,
     private readonly registerPublicKeyUc: RegisterPublicKeyUseCase,
     private readonly getNotarisPublicKeyUc: GetNotarisPublicKeyUseCase,
+    private readonly entityManager: EntityManager,
+    private readonly auditLogService: AuditLogService,
   ) {}
 
   getById(
@@ -90,5 +94,40 @@ export class UserOrchestrator {
       id: user.id,
       fullName: user.fullName || user.email,
     }));
+  }
+
+  async getAdminDashboardStats(): Promise<{
+    totalUsers: number;
+    totalAssets: number;
+    pendingAssets: number;
+    criticalLogs: number;
+  }> {
+    // Gunakan query raw/TypeORM query builder via EntityManager
+    // agar tidak perlu mengubah semua interface Repository di clean architecture
+    const totalUsers = await this.entityManager.count('users', {
+      where: { isActive: true },
+    });
+
+    const totalAssets = await this.entityManager.count('assets', {});
+    const pendingAssets = await this.entityManager.count('assets', {
+      where: { status: 'PENDING_VERIFICATION' },
+    });
+
+    // Ambil log severity CRITICAL (bisa pakai query DB atau AuditLogService jika terekspos)
+    // AuditLogService di wt-backend menggunakan Mongoose.
+    let criticalLogs = 0;
+    try {
+      const logs = await this.auditLogService.getPaginatedLogs({ severity: 'CRITICAL' as any, limit: 1 });
+      criticalLogs = logs.total;
+    } catch (err) {
+      console.error('Failed to get critical logs count', err);
+    }
+
+    return {
+      totalUsers,
+      totalAssets,
+      pendingAssets,
+      criticalLogs,
+    };
   }
 }

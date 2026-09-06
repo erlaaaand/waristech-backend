@@ -63,8 +63,8 @@ import { ComplianceModule } from './module/shared/compliance/compliance.module';
           password: configService.get<string>('DB_PASSWORD'),
           database: configService.get<string>('DB_DATABASE'),
           autoLoadEntities: true,
-          // Dikembalikan ke !isProduction untuk keamanan data production
-          synchronize: !isProduction,
+          // Sementara diubah ke true untuk push skema terbaru (kolom assignedNotarisId) ke Railway
+          synchronize: true,
           extra: {
             connectionLimit: configService.get<number>('DB_CONNECTION_LIMIT'),
           },
