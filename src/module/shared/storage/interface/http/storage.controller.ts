@@ -156,7 +156,7 @@ export class StorageController {
     description: 'Anda tidak memiliki hak akses untuk file ini.',
   })
   async delete(
-    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @CurrentUser('sub') authenticatedUserId: string,
   ): Promise<void> {
     await this.orchestrator.delete(id, authenticatedUserId);

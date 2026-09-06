@@ -180,7 +180,7 @@ export class InheritanceController {
     description: 'Data anggota keluarga tidak ditemukan.',
   })
   async confirmFamilyMember(
-    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<FamilyMemberResponseDto> {
     return this.confirmFamilyMemberUc.execute(id, user.sub);
@@ -200,7 +200,7 @@ export class InheritanceController {
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiOkResponse({ type: FamilyMemberResponseDto })
   async verifyFamilyMember(
-    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<FamilyMemberResponseDto> {
     return this.verifyFamilyMemberUc.verify(id, user.sub);
@@ -220,7 +220,7 @@ export class InheritanceController {
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiOkResponse({ type: FamilyMemberResponseDto })
   async rejectFamilyMember(
-    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<FamilyMemberResponseDto> {
     return this.verifyFamilyMemberUc.reject(id, user.sub);
@@ -313,7 +313,7 @@ export class InheritanceController {
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiOkResponse({ type: DeathVerificationResponseDto })
   async verifyDeathCertificate(
-    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<DeathVerificationResponseDto> {
     return this.orchestrator.verifyDeathCertificate(id, user.sub);

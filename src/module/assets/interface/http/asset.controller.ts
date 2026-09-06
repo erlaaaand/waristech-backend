@@ -102,7 +102,7 @@ export class AssetController {
     description: 'Bagian kunci Notaris berhasil dititipkan.',
   })
   escrowNotarisShare(
-    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: EscrowNotarisShareDto,
   ): Promise<{ message: string }> {
@@ -128,7 +128,7 @@ export class AssetController {
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiOkResponse({ description: 'Bagian kunci berhasil dirotasi.' })
   rotateKeyShares(
-    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: RotateKeySharesDto,
   ): Promise<{ message: string; rotatedAt: Date }> {
@@ -155,7 +155,7 @@ export class AssetController {
     description: 'Permohonan tercatat beserta panduan jalur resmi.',
   })
   requestLegalFallback(
-    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: RequestLegalFallbackDto,
   ) {
@@ -180,7 +180,7 @@ export class AssetController {
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiOkResponse({ description: 'Panduan berhasil diambil.' })
   getAssetGuidance(
-    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.orchestrator.getAssetGuidance(id, user.sub);

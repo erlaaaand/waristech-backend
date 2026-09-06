@@ -79,7 +79,7 @@ async function bootstrap(): Promise<void> {
       if (!origin) {
         return callback(null, true);
       }
-      
+
       // Di production, cek apakah origin ada di daftar ATAU daftar memiliki '*'
       // Di development, izinkan juga pola localhost/LAN
       if (
@@ -90,7 +90,9 @@ async function bootstrap(): Promise<void> {
         callback(null, true); // Merefleksikan origin agar credentials:true berfungsi di browser
       } else {
         callback(
-          new Error(`CORS: origin "${origin}" tidak diizinkan oleh kebijakan server.`),
+          new Error(
+            `CORS: origin "${origin}" tidak diizinkan oleh kebijakan server.`,
+          ),
           false,
         );
       }

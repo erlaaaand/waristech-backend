@@ -203,7 +203,7 @@ export class UserController {
     description: 'Notaris tidak ditemukan atau belum mendaftarkan public key.',
   })
   async getNotarisPublicKey(
-    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<{ notarisId: string; fullName: string; publicKey: string }> {
     return this.orchestrator.getNotarisPublicKey(id);
   }
@@ -237,7 +237,7 @@ export class UserController {
   })
   @ApiNotFoundResponse({ description: 'User tidak ditemukan.' })
   async getById(
-    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<UserResponseDto> {
     return this.orchestrator.getById(id, user);
@@ -276,7 +276,7 @@ export class UserController {
     description: 'Validasi gagal — field tidak sesuai ketentuan.',
   })
   async update(
-    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: UpdateUserDto,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<UserResponseDto> {
