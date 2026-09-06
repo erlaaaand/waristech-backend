@@ -67,7 +67,9 @@ export class MailService implements OnModuleInit {
 
   async sendOtpEmail(to: string, name: string, otp: string): Promise<void> {
     try {
-      const sender = this.configService.get<string>('EMAIL_USER');
+      const sender =
+        this.configService.get<string>('EMAIL_FROM_ADDRESS') ||
+        this.configService.get<string>('EMAIL_USER');
       const appName =
         this.configService.get<string>('EMAIL_FROM_NAME') || 'WarisTech';
 
@@ -120,7 +122,9 @@ export class MailService implements OnModuleInit {
     otp: string,
   ): Promise<void> {
     try {
-      const sender = this.configService.get<string>('EMAIL_USER');
+      const sender =
+        this.configService.get<string>('EMAIL_FROM_ADDRESS') ||
+        this.configService.get<string>('EMAIL_USER');
       const appName =
         this.configService.get<string>('EMAIL_FROM_NAME') || 'WarisTech';
 
@@ -173,7 +177,9 @@ export class MailService implements OnModuleInit {
   /** Tahap Peringatan (hari 1-14 setelah checkpoint 30 hari terlewat). */
   async sendProofOfLifeReminder(to: string, name: string): Promise<void> {
     try {
-      const sender = this.configService.get<string>('EMAIL_USER');
+      const sender =
+        this.configService.get<string>('EMAIL_FROM_ADDRESS') ||
+        this.configService.get<string>('EMAIL_USER');
       const appName =
         this.configService.get<string>('EMAIL_FROM_NAME') || 'WarisTech';
 
@@ -219,7 +225,9 @@ export class MailService implements OnModuleInit {
     otp: string,
   ): Promise<void> {
     try {
-      const sender = this.configService.get<string>('EMAIL_USER');
+      const sender =
+        this.configService.get<string>('EMAIL_FROM_ADDRESS') ||
+        this.configService.get<string>('EMAIL_USER');
       const appName =
         this.configService.get<string>('EMAIL_FROM_NAME') || 'WarisTech';
       const baseUrl =
@@ -277,7 +285,9 @@ export class MailService implements OnModuleInit {
     pewarisName: string,
   ): Promise<void> {
     try {
-      const sender = this.configService.get<string>('EMAIL_USER');
+      const sender =
+        this.configService.get<string>('EMAIL_FROM_ADDRESS') ||
+        this.configService.get<string>('EMAIL_USER');
       const appName =
         this.configService.get<string>('EMAIL_FROM_NAME') || 'WarisTech';
 
