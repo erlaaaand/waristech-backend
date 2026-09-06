@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import {
   IDeathVerificationRepository,
   type ICreateDeathVerificationData,
@@ -45,6 +45,14 @@ export class DeathVerificationRepository implements IDeathVerificationRepository
   async findByPewarisId(pewarisId: string): Promise<DeathVerificationDomain[]> {
     const entities = await this.repo.find({
       where: { pewarisId },
+      order: { createdAt: 'DESC' },
+    });
+    return entities.map((e) => this.toDomain(e));
+  }
+
+  async findPending(): Promise<DeathVerificationDomain[]> {
+    const entities = await this.repo.find({
+      where: { verifiedByNotarisId: IsNull() },
       order: { createdAt: 'DESC' },
     });
     return entities.map((e) => this.toDomain(e));

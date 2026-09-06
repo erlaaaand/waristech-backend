@@ -53,8 +53,6 @@ import { ComplianceModule } from './module/shared/compliance/compliance.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService): TypeOrmModuleOptions => {
-        const isProduction =
-          configService.get<string>('NODE_ENV') === 'production';
         return {
           type: 'mysql',
           host: configService.get<string>('DB_HOST'),

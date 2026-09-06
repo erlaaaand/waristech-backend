@@ -15,5 +15,6 @@ export interface IDeathVerificationRepository {
   create(data: ICreateDeathVerificationData): Promise<DeathVerificationDomain>;
   findById(id: string): Promise<DeathVerificationDomain | null>;
   findByPewarisId(pewarisId: string): Promise<DeathVerificationDomain[]>;
+  findPending(): Promise<DeathVerificationDomain[]>;
   verify(id: string, notarisId: string): Promise<DeathVerificationDomain>;
 }

@@ -21,6 +21,7 @@ import { GetMyWitnessesUseCase } from '../use-cases/get-my-witnesses.use-case';
 import { SubmitDeathCertificateUseCase } from '../use-cases/submit-death-certificate.use-case';
 import { SubmitDeathCertificateDto } from '../dto/submit-death-certificate.dto';
 import { VerifyDeathCertificateUseCase } from '../use-cases/verify-death-certificate.use-case';
+import { GetPendingDeathCertificatesNotarisUseCase } from '../use-cases/get-pending-death-certificates-notaris.use-case';
 
 @Injectable()
 export class InheritanceOrchestrator {
@@ -36,6 +37,7 @@ export class InheritanceOrchestrator {
     private readonly getMyWitnessesUc: GetMyWitnessesUseCase,
     private readonly submitDeathCertificateUc: SubmitDeathCertificateUseCase,
     private readonly verifyDeathCertificateUc: VerifyDeathCertificateUseCase,
+    private readonly getPendingDeathCertificatesUc: GetPendingDeathCertificatesNotarisUseCase,
   ) {}
 
   generateInvitationCode(
@@ -103,6 +105,10 @@ export class InheritanceOrchestrator {
     dto: SubmitDeathCertificateDto,
   ): Promise<DeathVerificationResponseDto> {
     return this.submitDeathCertificateUc.execute(submittedByUserId, dto);
+  }
+
+  listPendingDeathCertificates(): Promise<DeathVerificationResponseDto[]> {
+    return this.getPendingDeathCertificatesUc.execute();
   }
 
   verifyDeathCertificate(

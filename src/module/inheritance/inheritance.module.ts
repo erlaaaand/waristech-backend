@@ -38,6 +38,7 @@ import { RegisterWitnessUseCase } from './applications/use-cases/register-witnes
 import { GetMyWitnessesUseCase } from './applications/use-cases/get-my-witnesses.use-case';
 import { SubmitDeathCertificateUseCase } from './applications/use-cases/submit-death-certificate.use-case';
 import { VerifyDeathCertificateUseCase } from './applications/use-cases/verify-death-certificate.use-case';
+import { GetPendingDeathCertificatesNotarisUseCase } from './applications/use-cases/get-pending-death-certificates-notaris.use-case';
 
 // Interface
 import { InheritanceController } from './interface/http/inheritance.controller';
@@ -58,6 +59,7 @@ const USE_CASES = [
   GetMyWitnessesUseCase,
   SubmitDeathCertificateUseCase,
   VerifyDeathCertificateUseCase,
+  GetPendingDeathCertificatesNotarisUseCase,
 ];
 
 @Module({

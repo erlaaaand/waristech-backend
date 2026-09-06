@@ -354,6 +354,24 @@ export class InheritanceController {
     return this.orchestrator.submitDeathCertificate(user.sub, dto);
   }
 
+  // ── GET /inheritance/death-certificate/notaris/pending ──────────────────────
+
+  @SkipThrottle()
+  @Get('death-certificate/notaris/pending')
+  @HttpCode(HttpStatus.OK)
+  @Roles(UserRole.NOTARIS)
+  @ApiOperation({
+    summary: '(NOTARIS) Lihat antrean verifikasi akta kematian',
+    description: 'Menampilkan semua akta kematian yang belum diverifikasi.',
+    operationId: 'inheritanceGetPendingDeathCertificatesNotaris',
+  })
+  @ApiOkResponse({ type: [DeathVerificationResponseDto] })
+  async getPendingDeathCertificatesNotaris(): Promise<
+    DeathVerificationResponseDto[]
+  > {
+    return this.orchestrator.listPendingDeathCertificates();
+  }
+
   // ── PATCH /inheritance/death-certificate/:id/verify ──────────────────────────
 
   @Patch('death-certificate/:id/verify')
