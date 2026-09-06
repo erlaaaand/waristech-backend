@@ -22,7 +22,10 @@ import { CheckInUseCase } from '../../applications/use-cases/check-in.use-case';
 import { GetStatusUseCase } from '../../applications/use-cases/get-status.use-case';
 import { ProofOfLifeStatusDto } from '../../applications/dto/proof-of-life-status.dto';
 import { Audit } from '../../../shared/audit/decorators/audit.decorator';
-import { AuditCategory, AuditSeverity } from '../../../shared/audit/domains/enums/audit.enum';
+import {
+  AuditCategory,
+  AuditSeverity,
+} from '../../../shared/audit/domains/enums/audit.enum';
 
 @ApiTags('Proof-of-Life')
 @ApiBearerAuth('JWT')

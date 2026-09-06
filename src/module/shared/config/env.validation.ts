@@ -197,35 +197,55 @@ export function validate(
   const processedConfig: Record<string, unknown> = { ...config };
 
   // 1. Auto-map Railway MySQL variables if DB_* are missing or unresolved
-  if (!processedConfig.DB_HOST || String(processedConfig.DB_HOST).includes('${{')) {
+  if (
+    !processedConfig.DB_HOST ||
+    (typeof processedConfig.DB_HOST === 'string' &&
+      processedConfig.DB_HOST.includes('${{'))
+  ) {
     processedConfig.DB_HOST =
       process.env.MYSQLHOST ||
       process.env.MYSQL_HOST ||
       process.env.DB_HOST ||
       '127.0.0.1';
   }
-  if (!processedConfig.DB_PORT || String(processedConfig.DB_PORT).includes('${{')) {
+  if (
+    !processedConfig.DB_PORT ||
+    (typeof processedConfig.DB_PORT === 'string' &&
+      processedConfig.DB_PORT.includes('${{'))
+  ) {
     processedConfig.DB_PORT =
       process.env.MYSQLPORT ||
       process.env.MYSQL_PORT ||
       process.env.DB_PORT ||
       3306;
   }
-  if (!processedConfig.DB_USERNAME || String(processedConfig.DB_USERNAME).includes('${{')) {
+  if (
+    !processedConfig.DB_USERNAME ||
+    (typeof processedConfig.DB_USERNAME === 'string' &&
+      processedConfig.DB_USERNAME.includes('${{'))
+  ) {
     processedConfig.DB_USERNAME =
       process.env.MYSQLUSER ||
       process.env.MYSQL_USER ||
       process.env.DB_USERNAME ||
       'root';
   }
-  if (!processedConfig.DB_PASSWORD || String(processedConfig.DB_PASSWORD).includes('${{')) {
+  if (
+    !processedConfig.DB_PASSWORD ||
+    (typeof processedConfig.DB_PASSWORD === 'string' &&
+      processedConfig.DB_PASSWORD.includes('${{'))
+  ) {
     processedConfig.DB_PASSWORD =
       process.env.MYSQLPASSWORD ||
       process.env.MYSQL_PASSWORD ||
       process.env.DB_PASSWORD ||
       '';
   }
-  if (!processedConfig.DB_DATABASE || String(processedConfig.DB_DATABASE).includes('${{')) {
+  if (
+    !processedConfig.DB_DATABASE ||
+    (typeof processedConfig.DB_DATABASE === 'string' &&
+      processedConfig.DB_DATABASE.includes('${{'))
+  ) {
     processedConfig.DB_DATABASE =
       process.env.MYSQLDATABASE ||
       process.env.MYSQL_DATABASE ||
@@ -234,27 +254,37 @@ export function validate(
   }
 
   // 2. Auto-map Railway Redis variables
-  if (!processedConfig.REDIS_HOST || String(processedConfig.REDIS_HOST).includes('${{')) {
+  if (
+    !processedConfig.REDIS_HOST ||
+    (typeof processedConfig.REDIS_HOST === 'string' &&
+      processedConfig.REDIS_HOST.includes('${{'))
+  ) {
     processedConfig.REDIS_HOST =
-      process.env.REDISHOST ||
-      process.env.REDIS_HOST ||
-      '127.0.0.1';
+      process.env.REDISHOST || process.env.REDIS_HOST || '127.0.0.1';
   }
-  if (!processedConfig.REDIS_PORT || String(processedConfig.REDIS_PORT).includes('${{')) {
+  if (
+    !processedConfig.REDIS_PORT ||
+    (typeof processedConfig.REDIS_PORT === 'string' &&
+      processedConfig.REDIS_PORT.includes('${{'))
+  ) {
     processedConfig.REDIS_PORT =
-      process.env.REDISPORT ||
-      process.env.REDIS_PORT ||
-      6379;
+      process.env.REDISPORT || process.env.REDIS_PORT || 6379;
   }
-  if (!processedConfig.REDIS_PASSWORD || String(processedConfig.REDIS_PASSWORD).includes('${{')) {
+  if (
+    !processedConfig.REDIS_PASSWORD ||
+    (typeof processedConfig.REDIS_PASSWORD === 'string' &&
+      processedConfig.REDIS_PASSWORD.includes('${{'))
+  ) {
     processedConfig.REDIS_PASSWORD =
-      process.env.REDISPASSWORD ||
-      process.env.REDIS_PASSWORD ||
-      '';
+      process.env.REDISPASSWORD || process.env.REDIS_PASSWORD || '';
   }
 
   // 3. Auto-map Railway MongoDB variables
-  if (!processedConfig.MONGODB_URI || String(processedConfig.MONGODB_URI).includes('${{')) {
+  if (
+    !processedConfig.MONGODB_URI ||
+    (typeof processedConfig.MONGODB_URI === 'string' &&
+      processedConfig.MONGODB_URI.includes('${{'))
+  ) {
     processedConfig.MONGODB_URI =
       process.env.MONGO_URL ||
       process.env.MONGODB_URI ||
@@ -262,7 +292,8 @@ export function validate(
   }
 
   // 4. Safe URL validation & Railway Public Domain Fallback
-  const railwayDomain = process.env.RAILWAY_PUBLIC_DOMAIN || process.env.RAILWAY_STATIC_URL;
+  const railwayDomain =
+    process.env.RAILWAY_PUBLIC_DOMAIN || process.env.RAILWAY_STATIC_URL;
   const isValidUrl = (url?: unknown) => {
     if (typeof url !== 'string' || !url || url.includes('${{')) return false;
     try {
@@ -274,18 +305,30 @@ export function validate(
   };
 
   if (!isValidUrl(processedConfig.APP_BASE_URL)) {
-    processedConfig.APP_BASE_URL = railwayDomain ? `https://${railwayDomain}` : 'http://localhost:3000';
+    processedConfig.APP_BASE_URL = railwayDomain
+      ? `https://${railwayDomain}`
+      : 'http://localhost:3000';
   }
   if (!isValidUrl(processedConfig.APP_FRONTEND_URL)) {
-    processedConfig.APP_FRONTEND_URL = railwayDomain ? `https://${railwayDomain}` : 'http://localhost:3000';
+    processedConfig.APP_FRONTEND_URL = railwayDomain
+      ? `https://${railwayDomain}`
+      : 'http://localhost:3000';
   }
-  if (!processedConfig.CORS_ORIGINS || String(processedConfig.CORS_ORIGINS).includes('${{')) {
+  if (
+    !processedConfig.CORS_ORIGINS ||
+    (typeof processedConfig.CORS_ORIGINS === 'string' &&
+      processedConfig.CORS_ORIGINS.includes('${{'))
+  ) {
     processedConfig.CORS_ORIGINS = '*';
   }
 
-  const validatedConfig = plainToInstance(EnvironmentVariables, processedConfig, {
-    enableImplicitConversion: true,
-  });
+  const validatedConfig = plainToInstance(
+    EnvironmentVariables,
+    processedConfig,
+    {
+      enableImplicitConversion: true,
+    },
+  );
 
   const errors = validateSync(validatedConfig, {
     skipMissingProperties: false,
