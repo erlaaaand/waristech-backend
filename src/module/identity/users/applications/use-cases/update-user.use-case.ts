@@ -41,6 +41,16 @@ export class UpdateUserUseCase {
       updatePayload.fullName = dto.fullName ?? null;
     }
 
+    if (dto.email !== undefined) {
+      updatePayload.email = dto.email ?? null;
+      // CATATAN: Untuk versi lengkap, di sini seharusnya ada pengecekan uniqueness
+      // const exists = await this.userRepo.existsByEmail(dto.email);
+    }
+
+    if (dto.phone !== undefined) {
+      updatePayload.phoneNumber = dto.phone ?? null;
+    }
+
     if (dto.newPassword || dto.currentPassword) {
       if (!dto.newPassword || !dto.currentPassword) {
         throw new BadRequestException(

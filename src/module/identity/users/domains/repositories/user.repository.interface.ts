@@ -38,6 +38,8 @@ export type IUpdateUserData = Partial<
   Pick<
     Mutable<UserDomain>,
     | 'fullName'
+    | 'email'
+    | 'phoneNumber'
     | 'password'
     | 'avatarUrl'
     | 'role'

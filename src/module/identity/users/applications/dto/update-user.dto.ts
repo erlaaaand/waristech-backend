@@ -6,6 +6,7 @@ import {
   Matches,
   MaxLength,
   MinLength,
+  IsEmail,
 } from 'class-validator';
 
 export class UpdateUserDto {
@@ -18,6 +19,22 @@ export class UpdateUserDto {
   @IsOptional()
   @MaxLength(100)
   fullName?: string;
+
+  @ApiPropertyOptional({
+    description: 'Email pengguna (opsional).',
+    example: 'budi@example.com',
+  })
+  @IsEmail({}, { message: 'Format email tidak valid' })
+  @IsOptional()
+  email?: string;
+
+  @ApiPropertyOptional({
+    description: 'Nomor HP pengguna (opsional).',
+    example: '081234567890',
+  })
+  @IsString()
+  @IsOptional()
+  phone?: string;
 
   @ApiPropertyOptional({
     description: 'Password saat ini — wajib jika ingin mengganti password.',
