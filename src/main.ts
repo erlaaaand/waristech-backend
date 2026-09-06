@@ -138,7 +138,7 @@ async function bootstrap(): Promise<void> {
     cookieName: 'x-csrf-token',
     cookieOptions: {
       httpOnly: true,
-      sameSite: 'lax',
+      sameSite: isProd ? 'none' : 'lax',
       secure: isProd,
       path: '/',
       domain: isProd
