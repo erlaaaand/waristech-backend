@@ -35,7 +35,7 @@ export class MailService implements OnModuleInit {
       this.transporter = nodemailer.createTransport(
         MailtrapTransport({
           token: pass,
-        })
+        }),
       );
     } else {
       this.transporter = nodemailer.createTransport({
@@ -68,7 +68,9 @@ export class MailService implements OnModuleInit {
           }
         });
     } else {
-      this.logger.log('✅ Mailtrap API connection diinisialisasi (Verify di-skip).');
+      this.logger.log(
+        '✅ Mailtrap API connection diinisialisasi (Verify di-skip).',
+      );
     }
   }
 
