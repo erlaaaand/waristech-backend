@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
+import { MailtrapTransport } from 'mailtrap';
 
 @Injectable()
 export class MailService implements OnModuleInit {
@@ -16,53 +17,59 @@ export class MailService implements OnModuleInit {
   private readonly transporter: nodemailer.Transporter;
 
   constructor(private readonly configService: ConfigService) {
-    // Tambahkan || '' atau nilai default untuk mencegah undefined
     const host = this.configService.get<string>('EMAIL_HOST') || '';
-
-    // Berikan '587' sebagai string cadangan sebelum di-parse
     const port = parseInt(
       this.configService.get<string>('EMAIL_PORT') || '587',
       10,
     );
-
-    // Perbandingan === otomatis menghasilkan boolean murni
     const secure = this.configService.get<string>('EMAIL_SECURE') === 'true';
-
     const user = this.configService.get<string>('EMAIL_USER') || '';
     const pass = this.configService.get<string>('EMAIL_PASS') || '';
 
     this.logger.log(
-      `SMTP Config -> host=${host}, port=${port}, secure=${secure}, user=${user}`,
+      `Mail Config -> host=${host}, port=${port}, secure=${secure}, user=${user}`,
     );
 
-    this.transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure,
-      auth: {
-        user,
-        pass,
-      },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 10000,
-    });
+    if (host.includes('mailtrap') && user === 'api') {
+      this.logger.log('Menggunakan Mailtrap API Transport (Bebas Blokir Port)');
+      this.transporter = nodemailer.createTransport(
+        MailtrapTransport({
+          token: pass,
+        })
+      );
+    } else {
+      this.transporter = nodemailer.createTransport({
+        host,
+        port,
+        secure,
+        auth: {
+          user,
+          pass,
+        },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 10000,
+      });
+    }
   }
 
   onModuleInit(): void {
-    // Jalankan verifikasi di background agar tidak memblokir startup (terutama di Hostinger)
-    this.transporter
-      .verify()
-      .then(() => {
-        this.logger.log('✅ SMTP connection berhasil.');
-      })
-      .catch((err: unknown) => {
-        if (err instanceof Error) {
-          this.logger.error(`SMTP Verify Error: ${err.message}`, err.stack);
-        } else {
-          this.logger.error('SMTP Verify Error', String(err));
-        }
-      });
+    if (this.transporter.verify) {
+      this.transporter
+        .verify()
+        .then(() => {
+          this.logger.log('✅ SMTP / Mail connection berhasil.');
+        })
+        .catch((err: unknown) => {
+          if (err instanceof Error) {
+            this.logger.error(`Mail Verify Error: ${err.message}`, err.stack);
+          } else {
+            this.logger.error('Mail Verify Error', String(err));
+          }
+        });
+    } else {
+      this.logger.log('✅ Mailtrap API connection diinisialisasi (Verify di-skip).');
+    }
   }
 
   async sendOtpEmail(to: string, name: string, otp: string): Promise<void> {
