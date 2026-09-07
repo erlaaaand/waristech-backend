@@ -83,6 +83,37 @@ export class S3StorageAdapter implements IStorageAdapter {
     }
   }
 
+  /**
+   * Pola pesan error yang bersifat SEMENTARA (worth retry) — termasuk
+   * "The connection to the database timed out", yang BUKAN database kita
+   * sendiri, melainkan galat internal dari backend storage penyedia (mis.
+   * Supabase Storage berbasis Postgres yang sempat "cold start"/timeout).
+   * AWS SDK sendiri sudah retry error jaringan standar secara internal,
+   * tapi pesan non-standar seperti ini tidak selalu dikenali sebagai
+   * retryable oleh SDK, jadi kita tambah lapis retry sendiri di sini.
+   */
+  private static readonly TRANSIENT_ERROR_PATTERNS = [
+    'timed out',
+    'timeout',
+    'econnreset',
+    'econnrefused',
+    'networkingerror',
+    'socket hang up',
+    '503',
+    '504',
+  ];
+
+  private isTransientError(message: string): boolean {
+    const lower = message.toLowerCase();
+    return S3StorageAdapter.TRANSIENT_ERROR_PATTERNS.some((p) =>
+      lower.includes(p),
+    );
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
   async upload(file: RawUploadedFile, fileKey: string): Promise<UploadResult> {
     // Guard clause: Pastikan client tersedia
     if (!this.client) {
@@ -91,50 +122,69 @@ export class S3StorageAdapter implements IStorageAdapter {
       );
     }
 
-    try {
-      const putCommandInput: PutObjectCommandInput = {
-        Bucket: this.bucket,
-        Key: fileKey,
-        Body: file.buffer,
-        ContentType: file.mimeType,
-        ContentLength: file.sizeInBytes,
-        Metadata: {
-          originalName: encodeURIComponent(file.originalName),
-        },
-      };
+    const putCommandInput: PutObjectCommandInput = {
+      Bucket: this.bucket,
+      Key: fileKey,
+      Body: file.buffer,
+      ContentType: file.mimeType,
+      ContentLength: file.sizeInBytes,
+      Metadata: {
+        originalName: encodeURIComponent(file.originalName),
+      },
+    };
 
-      const command = new PutObjectCommand(putCommandInput);
-      await this.client.send(command);
+    const maxAttempts = 3;
+    let lastMessage = '';
 
-      this.logger.log(`[S3] File uploaded → s3://${this.bucket}/${fileKey}`);
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const command = new PutObjectCommand(putCommandInput);
+        await this.client.send(command);
 
-      const result: UploadResult = {
-        fileKey,
-        fileUrl: this.buildPublicUrl(fileKey),
-        originalName: file.originalName,
-        mimeType: file.mimeType,
-        sizeInBytes: file.sizeInBytes,
-        provider: 's3',
-      };
-
-      return result;
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`[S3] Upload failed → ${message}`);
-
-      if (
-        message.includes('NetworkingError') ||
-        message.includes('ECONNREFUSED')
-      ) {
-        throw new ServiceUnavailableException(
-          'AWS S3 tidak dapat dijangkau saat ini',
+        this.logger.log(
+          `[S3] File uploaded → s3://${this.bucket}/${fileKey}` +
+            (attempt > 1 ? ` (percobaan ke-${attempt})` : ''),
         );
-      }
 
-      throw new InternalServerErrorException(
-        `Gagal mengupload file ke S3: ${message}`,
+        return {
+          fileKey,
+          fileUrl: this.buildPublicUrl(fileKey),
+          originalName: file.originalName,
+          mimeType: file.mimeType,
+          sizeInBytes: file.sizeInBytes,
+          provider: 's3',
+        };
+      } catch (err: unknown) {
+        lastMessage = err instanceof Error ? err.message : String(err);
+        const isLastAttempt = attempt === maxAttempts;
+        const transient = this.isTransientError(lastMessage);
+
+        this.logger.error(
+          `[S3] Upload gagal (percobaan ${attempt}/${maxAttempts}) → ${lastMessage}` +
+            (transient && !isLastAttempt ? ' — mencoba ulang...' : ''),
+        );
+
+        if (!transient || isLastAttempt) {
+          break;
+        }
+
+        // Backoff singkat: 500ms, lalu 1500ms.
+        await this.sleep(attempt === 1 ? 500 : 1500);
+      }
+    }
+
+    if (
+      lastMessage.includes('NetworkingError') ||
+      lastMessage.includes('ECONNREFUSED')
+    ) {
+      throw new ServiceUnavailableException(
+        'AWS S3 tidak dapat dijangkau saat ini',
       );
     }
+
+    throw new InternalServerErrorException(
+      `Gagal mengupload file ke S3: ${lastMessage}`,
+    );
   }
 
   async delete(fileKey: string): Promise<void> {
