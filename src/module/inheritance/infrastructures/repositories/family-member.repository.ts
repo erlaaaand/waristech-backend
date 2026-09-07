@@ -51,7 +51,7 @@ export class FamilyMemberRepository implements IFamilyMemberRepository {
       supportingDocumentUrl: data.supportingDocumentUrl ?? null,
       status: isNonNasab
         ? FamilyMemberStatus.PENDING_VERIFICATION
-        : FamilyMemberStatus.PENDING_CONFIRMATION,
+        : FamilyMemberStatus.VERIFIED,
     });
     const saved = await this.repo.save(entity);
     return this.toDomain(saved);

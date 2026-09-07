@@ -48,7 +48,7 @@ export class GenerateInvitationUseCase {
     // 2. Buat kode undangan unik & set kedaluwarsa 7 hari, dengan retry bila
     // (sangat jarang) terjadi tabrakan kode dengan undangan lain yang sudah ada.
     const expiresAt = this.invitationCodeService.calculateExpiration(7);
-    const invitation = await this.createWithRetry(pewarisId, expiresAt);
+    const invitation = await this.createWithRetry(pewarisId, expiresAt, dto);
 
     return {
       id: invitation.id,
@@ -65,6 +65,7 @@ export class GenerateInvitationUseCase {
   private async createWithRetry(
     pewarisId: string,
     expiresAt: Date,
+    dto: GenerateInvitationDto,
   ): Promise<InvitationDomain> {
     for (let attempt = 1; attempt <= MAX_CODE_COLLISION_RETRIES; attempt++) {
       const code = this.invitationCodeService.generateCode();
@@ -74,6 +75,9 @@ export class GenerateInvitationUseCase {
           code,
           pewarisId,
           expiresAt,
+          relationshipType: dto.relationshipType,
+          relationshipDescription: dto.relationshipDescription,
+          supportingDocumentUrl: dto.supportingDocumentUrl,
         });
       } catch (error: unknown) {
         if (

@@ -16,6 +16,7 @@ export interface AhliWarisRegistrationPayload {
   familyMemberId: string;
   relationshipType: RelationshipType;
   relationshipDescription: string;
+  supportingDocumentUrl?: string | null;
 }
 
 @Injectable()
@@ -45,6 +46,7 @@ export class InheritanceRegistrationService {
       ahliWarisId: payload.ahliWarisId,
       relationshipType: payload.relationshipType,
       relationshipDescription: payload.relationshipDescription,
+      supportingDocumentUrl: payload.supportingDocumentUrl,
     });
   }
 }

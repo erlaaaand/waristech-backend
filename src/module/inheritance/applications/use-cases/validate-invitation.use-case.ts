@@ -45,6 +45,9 @@ export class ValidateInvitationUseCase {
     return {
       pewarisId: invitation.pewarisId,
       invitationId: invitation.id,
+      relationshipType: invitation.relationshipType!,
+      relationshipDescription: invitation.relationshipDescription!,
+      supportingDocumentUrl: invitation.supportingDocumentUrl,
     };
   }
 }

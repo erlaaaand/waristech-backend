@@ -10,6 +10,9 @@ export interface IInvitationRepository {
     code: string;
     pewarisId: string;
     expiresAt: Date;
+    relationshipType: string;
+    relationshipDescription: string;
+    supportingDocumentUrl?: string | null;
   }): Promise<InvitationDomain>;
 
   findByCode(code: string): Promise<InvitationDomain | null>;

@@ -30,6 +30,15 @@ export class InvitationTypeOrmEntity {
   @Column({ type: 'timestamp' })
   expiresAt: Date = new Date();
 
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  relationshipType: string | null = null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  relationshipDescription: string | null = null;
+
+  @Column({ type: 'varchar', length: 512, nullable: true })
+  supportingDocumentUrl: string | null = null;
+
   @Column({ type: 'varchar', length: 36, nullable: true })
   usedByAhliWarisId: string | null = null;
 

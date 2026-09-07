@@ -27,6 +27,9 @@ export class InvitationRepository implements IInvitationRepository {
       entity.pewarisId,
       entity.status,
       entity.expiresAt,
+      entity.relationshipType,
+      entity.relationshipDescription,
+      entity.supportingDocumentUrl,
       entity.usedByAhliWarisId,
       entity.createdAt,
     );
@@ -37,6 +40,9 @@ export class InvitationRepository implements IInvitationRepository {
     code: string;
     pewarisId: string;
     expiresAt: Date;
+    relationshipType: string;
+    relationshipDescription: string;
+    supportingDocumentUrl?: string | null;
   }): Promise<InvitationDomain> {
     const entity = this.repo.create({
       id: data.id,
@@ -44,6 +50,9 @@ export class InvitationRepository implements IInvitationRepository {
       pewarisId: data.pewarisId,
       expiresAt: data.expiresAt,
       status: InvitationStatus.PENDING,
+      relationshipType: data.relationshipType,
+      relationshipDescription: data.relationshipDescription,
+      supportingDocumentUrl: data.supportingDocumentUrl,
     });
     const saved = await this.repo.save(entity);
     return this.toDomain(saved);

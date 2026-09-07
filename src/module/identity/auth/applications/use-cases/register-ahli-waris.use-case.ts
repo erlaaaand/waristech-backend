@@ -39,9 +39,12 @@ export class RegisterAhliWarisUseCase {
     dto: RegisterAhliWarisDto,
   ): Promise<{ message: string; userId: string }> {
     // 1. Validasi awal (feedback cepat jika kode jelas salah/kedaluwarsa)
-    const { pewarisId } = await this.validateInvitationUseCase.execute(
-      dto.invitationCode,
-    );
+    const {
+      pewarisId,
+      relationshipType,
+      relationshipDescription,
+      supportingDocumentUrl,
+    } = await this.validateInvitationUseCase.execute(dto.invitationCode);
 
     // 2. Klaim kode undangan SEKARANG secara atomik — SEBELUM akun dibuat.
     // Ini gerbang tunggal yang mencegah kode yang sama dipakai dua kali
@@ -80,9 +83,9 @@ export class RegisterAhliWarisUseCase {
         ahliWarisId: user.id,
         pewarisId,
         familyMemberId: randomUUID(),
-        relationshipType: RelationshipType.NASAB,
-        relationshipDescription:
-          'Hubungan keluarga (menunggu konfirmasi Pewaris)',
+        relationshipType: relationshipType as RelationshipType,
+        relationshipDescription: relationshipDescription,
+        supportingDocumentUrl: supportingDocumentUrl,
       });
 
       // 7. Kirim OTP via Email — akun & relasi keluarga SUDAH tersimpan di

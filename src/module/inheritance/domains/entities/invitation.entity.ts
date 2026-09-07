@@ -9,6 +9,9 @@ export class InvitationDomain {
     public readonly pewarisId: string,
     public readonly status: InvitationStatus,
     public readonly expiresAt: Date,
+    public readonly relationshipType: string | null,
+    public readonly relationshipDescription: string | null,
+    public readonly supportingDocumentUrl: string | null,
     public readonly usedByAhliWarisId: string | null,
     public readonly createdAt: Date,
   ) {}
