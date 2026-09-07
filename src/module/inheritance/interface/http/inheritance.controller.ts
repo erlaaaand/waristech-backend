@@ -30,6 +30,7 @@ import { AuthenticatedUser } from '../../../identity/auth/domains/entities/jwt-p
 import { UserRole } from '../../../identity/users/domains/entities/user.entity';
 import { InheritanceExceptionFilter } from '../../interface/filters/inheritance-exception.filter';
 import { GenerateInvitationDto } from '../../applications/dto/generate-invitation.dto';
+import { AcceptInvitationDto } from '../../applications/dto/accept-invitation.dto';
 import {
   FamilyMemberResponseDto,
   InvitationResponseDto,
@@ -38,6 +39,7 @@ import {
   MyFamilyMembershipResponseDto,
 } from '../../applications/dto/inheritance-response.dto';
 import { GenerateInvitationUseCase } from '../../applications/use-cases/generate-invitation.use-case';
+import { AcceptInvitationUseCase } from '../../applications/use-cases/accept-invitation.use-case';
 import { GetMyInvitationsUseCase } from '../../applications/use-cases/get-my-invitations.use-case';
 import { GetFamilyMembersUseCase } from '../../applications/use-cases/get-family-members.use-case';
 import { GetPendingFamilyMembersNotarisUseCase } from '../../applications/use-cases/get-pending-family-members-notaris.use-case';
@@ -63,6 +65,7 @@ import {
 export class InheritanceController {
   constructor(
     private readonly generateInvitationUc: GenerateInvitationUseCase,
+    private readonly acceptInvitationUc: AcceptInvitationUseCase,
     private readonly getMyInvitationsUc: GetMyInvitationsUseCase,
     private readonly getFamilyMembersUc: GetFamilyMembersUseCase,
     private readonly getPendingFamilyMembersNotarisUc: GetPendingFamilyMembersNotarisUseCase,
@@ -117,6 +120,37 @@ export class InheritanceController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<InvitationResponseDto[]> {
     return this.getMyInvitationsUc.execute(user.sub);
+  }
+
+  // ── POST /inheritance/invitations/accept ───────────────────────────────────
+
+  @Throttle({ dashboard: {} })
+  @Post('invitations/accept')
+  @HttpCode(HttpStatus.CREATED)
+  @Roles(UserRole.AHLI_WARIS)
+  @ApiOperation({
+    summary: '(AHLI WARIS) Terima undangan dengan akun yang sudah ada',
+    description:
+      'Menukarkan kode undangan TANPA membuat akun baru — untuk Ahli Waris ' +
+      'yang sudah punya akun dan ingin terhubung ke Pewaris lain (mis. ' +
+      'menerima undangan dari Ibu setelah sebelumnya terdaftar lewat undangan ' +
+      'Ayah). Pelengkap POST /auth/register/ahli-waris, yang selalu mencoba ' +
+      'membuat akun baru dan gagal bila email sudah terdaftar.',
+    operationId: 'inheritanceAcceptInvitation',
+  })
+  @ApiCreatedResponse({ type: MyFamilyMembershipResponseDto })
+  @Audit({
+    action: AuditAction.FAMILY_MEMBER_INVITED,
+    category: AuditCategory.WARIS_FAMILY,
+    severity: AuditSeverity.INFO,
+    resource: 'FamilyMember',
+    description: 'Ahli Waris menerima undangan dengan akun yang sudah ada',
+  })
+  async acceptInvitation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: AcceptInvitationDto,
+  ): Promise<MyFamilyMembershipResponseDto> {
+    return this.acceptInvitationUc.execute(dto.invitationCode, user.sub);
   }
 
   // ── GET /inheritance/family-members ───────────────────────────────────────

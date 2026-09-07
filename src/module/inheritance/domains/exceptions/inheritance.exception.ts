@@ -68,3 +68,12 @@ export class DeathVerificationNotFoundException extends Error {
     this.name = 'DeathVerificationNotFoundException';
   }
 }
+
+export class AlreadyFamilyMemberException extends Error {
+  constructor(
+    message = 'Anda sudah terhubung dengan Pewaris ini sebagai anggota keluarga.',
+  ) {
+    super(message);
+    this.name = 'AlreadyFamilyMemberException';
+  }
+}

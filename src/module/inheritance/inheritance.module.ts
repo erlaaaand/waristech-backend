@@ -27,6 +27,7 @@ import { InheritanceRegistrationService } from './domains/services/inheritance-r
 // Use Cases
 import { GenerateInvitationUseCase } from './applications/use-cases/generate-invitation.use-case';
 import { ValidateInvitationUseCase } from './applications/use-cases/validate-invitation.use-case';
+import { AcceptInvitationUseCase } from './applications/use-cases/accept-invitation.use-case';
 import { GetMyInvitationsUseCase } from './applications/use-cases/get-my-invitations.use-case';
 import { GetFamilyMembersUseCase } from './applications/use-cases/get-family-members.use-case';
 import { GetPendingFamilyMembersNotarisUseCase } from './applications/use-cases/get-pending-family-members-notaris.use-case';
@@ -48,6 +49,7 @@ import { InheritanceOrchestrator } from './applications/orchestrator/inheritance
 const USE_CASES = [
   GenerateInvitationUseCase,
   ValidateInvitationUseCase,
+  AcceptInvitationUseCase,
   GetMyInvitationsUseCase,
   GetFamilyMembersUseCase,
   GetPendingFamilyMembersNotarisUseCase,

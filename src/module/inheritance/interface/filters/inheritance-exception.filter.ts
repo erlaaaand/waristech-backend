@@ -17,6 +17,7 @@ import {
   MissingSupportingDocumentException,
   InvalidFamilyMemberStatusTransitionException,
   NonNasabRequiresNotarisVerificationException,
+  AlreadyFamilyMemberException,
 } from '../../domains/exceptions/inheritance.exception';
 
 interface ErrorResponseBody {
@@ -83,6 +84,10 @@ export class InheritanceExceptionFilter implements ExceptionFilter {
       exception instanceof NonNasabRequiresNotarisVerificationException
     ) {
       status = HttpStatus.BAD_REQUEST;
+      message = exception.message;
+      errorName = exception.name;
+    } else if (exception instanceof AlreadyFamilyMemberException) {
+      status = HttpStatus.CONFLICT;
       message = exception.message;
       errorName = exception.name;
     }
