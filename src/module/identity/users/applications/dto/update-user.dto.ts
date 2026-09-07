@@ -1,5 +1,6 @@
 // src/users/applications/dto/update-user.dto.ts
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsOptional,
   IsString,
@@ -8,6 +9,7 @@ import {
   MinLength,
   IsEmail,
 } from 'class-validator';
+import { PhoneNumberUtil } from '../../../../shared/utils/phone-number.util';
 
 export class UpdateUserDto {
   @ApiPropertyOptional({
@@ -29,11 +31,22 @@ export class UpdateUserDto {
   email?: string;
 
   @ApiPropertyOptional({
-    description: 'Nomor HP pengguna (opsional).',
+    description:
+      'Nomor HP pengguna (opsional). Diterima format 08xx/62xx/+62xx, ' +
+      'otomatis dinormalisasi ke format kanonik +62.',
     example: '081234567890',
+  })
+  @Transform(({ value }: { value: unknown }): string | undefined => {
+    if (typeof value !== 'string') return undefined;
+    return PhoneNumberUtil.normalize(value) ?? value.trim();
   })
   @IsString()
   @IsOptional()
+  @Matches(/^\+628\d{8,11}$/, {
+    message:
+      'Format nomor HP tidak valid. Gunakan nomor Indonesia yang benar, ' +
+      'contoh: 081234567890 atau +6281234567890.',
+  })
   phone?: string;
 
   @ApiPropertyOptional({

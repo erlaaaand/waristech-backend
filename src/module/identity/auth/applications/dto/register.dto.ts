@@ -11,6 +11,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { PhoneNumberUtil } from '../../../../shared/utils/phone-number.util';
 
 export class RegisterDto {
   @ApiProperty({
@@ -68,12 +69,24 @@ export class RegisterDto {
   // ── Kontak Pengguna ──
 
   @ApiProperty({
-    description: 'Nomor WhatsApp aktif peserta.',
+    description:
+      'Nomor WhatsApp aktif peserta. Diterima dalam format apa pun yang ' +
+      'umum di Indonesia (08xx, 62xx, +62xx) — otomatis dinormalisasi ke ' +
+      'format kanonik +62 sebelum disimpan.',
     example: '081234567890',
     maxLength: 20,
   })
+  @Transform(({ value }: { value: unknown }): string => {
+    if (typeof value !== 'string') return '';
+    return PhoneNumberUtil.normalize(value) ?? value.trim();
+  })
   @IsString({ message: 'Nomor telepon harus berupa teks' })
   @IsNotEmpty({ message: 'Nomor telepon wajib diisi' })
+  @Matches(/^\+628\d{8,11}$/, {
+    message:
+      'Format nomor HP tidak valid. Gunakan nomor Indonesia yang benar, ' +
+      'contoh: 081234567890 atau +6281234567890.',
+  })
   @MaxLength(20)
   phoneNumber: string = '';
 

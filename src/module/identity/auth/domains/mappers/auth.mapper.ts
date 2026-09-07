@@ -23,6 +23,7 @@ export class AuthMapper {
       email: user.email,
       fullName: user.fullName,
       role: user.role,
+      phoneNumber: user.phoneNumber || null,
     };
   }
 

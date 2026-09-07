@@ -24,6 +24,13 @@ export class AuthUserDto {
     description: 'Peran user dalam sistem',
   })
   role: string = '';
+
+  @ApiPropertyOptional({
+    example: '+6281234567890',
+    nullable: true,
+    description: 'Nomor HP terdaftar, null jika belum diisi',
+  })
+  phoneNumber: string | null = null;
 }
 
 /**

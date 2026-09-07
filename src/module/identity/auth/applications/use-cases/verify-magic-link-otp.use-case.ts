@@ -74,6 +74,7 @@ export class VerifyMagicLinkOtpUseCase {
         email: witness.email,
         fullName: witness.name,
         role: UserRole.GUEST,
+        phoneNumber: null,
       },
     };
   }
