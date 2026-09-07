@@ -12,6 +12,7 @@ import {
   AssetAlreadyVerifiedException,
 } from '../../domains/exceptions/asset.exception';
 import { AssetDomain } from '../../domains/entities/asset.entity';
+import { CalculationMethod } from '../../../calculation/domains/enums/calculation.enum';
 import { AuditLogService } from '../../../shared/audit/applications/services/audit-log.service';
 import {
   AuditAction,
@@ -19,6 +20,14 @@ import {
   AuditSeverity,
   AuditStatus,
 } from '../../../shared/audit/domains/enums/audit.enum';
+import { AssetNotifierService } from '../services/asset-notifier.service';
+import { NotificationType } from '../../../shared/notifications/entities/notification.entity';
+
+const SCHEME_LABELS: Record<CalculationMethod, string> = {
+  [CalculationMethod.FARAIDH]: 'Faraidh',
+  [CalculationMethod.CIVIL]: 'Perdata',
+  [CalculationMethod.CUSTOMARY]: 'Adat',
+};
 
 @Injectable()
 export class UpdateAssetUseCase {
@@ -26,6 +35,7 @@ export class UpdateAssetUseCase {
     @Inject(ASSET_REPOSITORY_TOKEN)
     private readonly assetRepo: IAssetRepository,
     private readonly auditLogService: AuditLogService,
+    private readonly notifier: AssetNotifierService,
   ) {}
 
   async execute(
@@ -57,7 +67,24 @@ export class UpdateAssetUseCase {
       assetName: dto.assetName,
       platform: dto.platform,
       accountIdentifier: dto.accountIdentifier,
+      inheritanceScheme: dto.inheritanceScheme,
     });
+
+    if (
+      dto.inheritanceScheme &&
+      dto.inheritanceScheme !== asset.inheritanceScheme &&
+      updated.assignedNotarisId
+    ) {
+      await this.notifier.notifyUser(
+        updated.assignedNotarisId,
+        'Skema Waris Diperbarui',
+        `Pewaris memperbarui skema waris untuk aset "${updated.assetName}" ` +
+          `menjadi ${SCHEME_LABELS[dto.inheritanceScheme]}. Skema ini mengikat ` +
+          'begitu Anda memverifikasi aset -- pastikan eksekusi pembagian ' +
+          'mengikuti wasiat yang diberikan.',
+        NotificationType.INFO,
+      );
+    }
 
     this.auditLogService.logAsync({
       action: AuditAction.ASSET_UPDATED,
@@ -86,6 +113,7 @@ export class UpdateAssetUseCase {
       custodyType: asset.custodyType,
       status: asset.status,
       assignedNotarisId: asset.assignedNotarisId,
+      inheritanceScheme: asset.inheritanceScheme,
       verifiedByNotarisId: asset.verifiedByNotarisId,
       verifiedAt: asset.verifiedAt,
       allocations: asset.allocations.map((a) => ({

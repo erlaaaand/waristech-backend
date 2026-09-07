@@ -57,6 +57,7 @@ export class AssetRepository implements IAssetRepository {
       entity.custodyType,
       entity.status,
       entity.assignedNotarisId,
+      entity.inheritanceScheme,
       entity.verifiedByNotarisId,
       entity.verifiedAt,
       entity.cooldownEndsAt,
@@ -77,6 +78,7 @@ export class AssetRepository implements IAssetRepository {
       accountIdentifier: data.accountIdentifier,
       custodyType: data.custodyType,
       assignedNotarisId: data.assignedNotarisId,
+      inheritanceScheme: data.inheritanceScheme ?? null,
       encryptedSecret: data.encryptedSecret ?? '',
       status: AssetStatus.PENDING_VERIFICATION,
     });

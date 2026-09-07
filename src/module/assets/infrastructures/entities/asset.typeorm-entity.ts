@@ -12,6 +12,7 @@ import {
   AssetStatus,
   AssetCustodyType,
 } from '../../domains/enums/asset.enum';
+import { CalculationMethod } from '../../../calculation/domains/enums/calculation.enum';
 import { AssetAllocationTypeOrmEntity } from './asset-allocation.typeorm-entity';
 
 @Entity({ name: 'assets' })
@@ -55,6 +56,19 @@ export class AssetTypeOrmEntity {
 
   @Column({ type: 'varchar', length: 36, nullable: true })
   assignedNotarisId: string | null = null;
+
+  /**
+   * Skema hukum waris yang dipilih Pewaris untuk aset INI (bukan preferensi
+   * global lama) -- label mengikat, ikut aturan lock yang sama dengan
+   * alokasi: hanya bisa diubah selama status masih PENDING_VERIFICATION,
+   * otomatis terkunci begitu Notaris memverifikasi aset.
+   */
+  @Column({
+    type: 'enum',
+    enum: CalculationMethod,
+    nullable: true,
+  })
+  inheritanceScheme: CalculationMethod | null = null;
 
   @Column({ type: 'varchar', length: 36, nullable: true })
   verifiedByNotarisId: string | null = null;

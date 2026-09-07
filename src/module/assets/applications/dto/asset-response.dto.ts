@@ -4,6 +4,7 @@ import {
   AssetStatus,
   AssetCustodyType,
 } from '../../domains/enums/asset.enum';
+import { CalculationMethod } from '../../../calculation/domains/enums/calculation.enum';
 
 export class AssetAllocationResponseDto {
   @ApiProperty() id!: string;
@@ -31,6 +32,15 @@ export class AssetResponseDto {
   custodyType!: AssetCustodyType;
   @ApiProperty({ enum: AssetStatus }) status!: AssetStatus;
   @ApiProperty({ nullable: true }) assignedNotarisId!: string | null;
+  @ApiProperty({
+    enum: CalculationMethod,
+    nullable: true,
+    description:
+      'Skema hukum waris yang dipilih Pewaris untuk aset ini (label, bukan ' +
+      'perhitungan otomatis). Bisa diubah selama status masih ' +
+      'PENDING_VERIFICATION, terkunci begitu Notaris memverifikasi aset.',
+  })
+  inheritanceScheme!: CalculationMethod | null;
   @ApiProperty({ nullable: true }) verifiedByNotarisId!: string | null;
   @ApiProperty({ nullable: true }) verifiedAt!: Date | null;
   @ApiProperty({ type: [AssetAllocationResponseDto] })

@@ -1,4 +1,5 @@
 import { AssetType, AssetStatus, AssetCustodyType } from '../enums/asset.enum';
+import { CalculationMethod } from '../../../calculation/domains/enums/calculation.enum';
 import { AssetAllocationDomain } from './asset-allocation.entity';
 import { AssetAllocationExceededException } from '../exceptions/asset.exception';
 
@@ -21,6 +22,7 @@ export class AssetDomain {
     public readonly custodyType: AssetCustodyType,
     public readonly status: AssetStatus,
     public readonly assignedNotarisId: string | null,
+    public readonly inheritanceScheme: CalculationMethod | null,
     public readonly verifiedByNotarisId: string | null,
     public readonly verifiedAt: Date | null,
     public readonly cooldownEndsAt: Date | null,

@@ -96,6 +96,7 @@ export class VerifyAssetUseCase {
       custodyType: asset.custodyType,
       status: asset.status,
       assignedNotarisId: asset.assignedNotarisId,
+      inheritanceScheme: asset.inheritanceScheme,
       verifiedByNotarisId: asset.verifiedByNotarisId,
       verifiedAt: asset.verifiedAt,
       allocations: asset.allocations.map((a) => ({

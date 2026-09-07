@@ -19,6 +19,7 @@ import {
   type IKeyShareRepository,
 } from '../../domains/repositories/key-share.repository.interface';
 import { AssetDomain } from '../../domains/entities/asset.entity';
+import { CalculationMethod } from '../../../calculation/domains/enums/calculation.enum';
 import { AuditLogService } from '../../../shared/audit/applications/services/audit-log.service';
 import {
   AuditAction,
@@ -26,6 +27,14 @@ import {
   AuditSeverity,
   AuditStatus,
 } from '../../../shared/audit/domains/enums/audit.enum';
+import { AssetNotifierService } from '../services/asset-notifier.service';
+import { NotificationType } from '../../../shared/notifications/entities/notification.entity';
+
+const SCHEME_LABELS: Record<CalculationMethod, string> = {
+  [CalculationMethod.FARAIDH]: 'Faraidh',
+  [CalculationMethod.CIVIL]: 'Perdata',
+  [CalculationMethod.CUSTOMARY]: 'Adat',
+};
 
 @Injectable()
 export class CreateAssetUseCase {
@@ -38,6 +47,7 @@ export class CreateAssetUseCase {
     private readonly keyShareRepo: IKeyShareRepository,
     private readonly guidanceService: InheritanceGuidanceService,
     private readonly auditLogService: AuditLogService,
+    private readonly notifier: AssetNotifierService,
   ) {}
 
   async execute(
@@ -55,8 +65,20 @@ export class CreateAssetUseCase {
       platform: dto.platform,
       accountIdentifier: dto.accountIdentifier,
       assignedNotarisId: dto.assignedNotarisId,
+      inheritanceScheme: dto.inheritanceScheme ?? null,
       custodyType,
     });
+
+    if (asset.inheritanceScheme) {
+      await this.notifier.notifyUser(
+        asset.assignedNotarisId!,
+        'Skema Waris Ditetapkan',
+        `Pewaris menetapkan skema ${SCHEME_LABELS[asset.inheritanceScheme]} ` +
+          `untuk aset "${asset.assetName}". Skema ini mengikat begitu Anda ` +
+          'memverifikasi aset -- pastikan eksekusi pembagian mengikuti wasiat yang diberikan.',
+        NotificationType.INFO,
+      );
+    }
 
     // ── Jalur GUIDANCE: kredensial tidak pernah masuk sistem ────────────────
     if (custodyType === AssetCustodyType.GUIDANCE) {
@@ -145,6 +167,7 @@ export class CreateAssetUseCase {
       custodyType: asset.custodyType,
       status: asset.status,
       assignedNotarisId: asset.assignedNotarisId,
+      inheritanceScheme: asset.inheritanceScheme,
       verifiedByNotarisId: asset.verifiedByNotarisId,
       verifiedAt: asset.verifiedAt,
       allocations: asset.allocations.map((a) => ({

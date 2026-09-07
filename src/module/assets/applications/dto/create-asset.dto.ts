@@ -10,6 +10,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { AssetType, AssetCustodyType } from '../../domains/enums/asset.enum';
+import { CalculationMethod } from '../../../calculation/domains/enums/calculation.enum';
 
 export class VaultSecretDto {
   @ApiProperty({ example: 'john_doe', required: false })
@@ -68,6 +69,19 @@ export class CreateAssetDto {
   @IsString()
   @IsNotEmpty()
   assignedNotarisId!: string;
+
+  @ApiPropertyOptional({
+    enum: CalculationMethod,
+    description:
+      'Skema hukum waris pilihan Pewaris untuk aset ini (label, bukan ' +
+      'perhitungan otomatis -- eksekusi pembagian tetap manual lewat ' +
+      'POST /assets/:id/allocate). Bisa diubah lewat PATCH selama aset ' +
+      'masih PENDING_VERIFICATION; Notaris yang ditugaskan akan ' +
+      'diberitahu skema ini agar dijalankan sesuai wasiat yang diberikan.',
+  })
+  @IsEnum(CalculationMethod)
+  @IsOptional()
+  inheritanceScheme?: CalculationMethod;
 
   @ApiPropertyOptional({
     enum: AssetCustodyType,

@@ -1,6 +1,7 @@
 import { AssetDomain } from '../entities/asset.entity';
 import { AssetAllocationDomain } from '../entities/asset-allocation.entity';
 import { AssetType, AssetStatus, AssetCustodyType } from '../enums/asset.enum';
+import { CalculationMethod } from '../../../calculation/domains/enums/calculation.enum';
 
 export const ASSET_REPOSITORY_TOKEN = Symbol('IAssetRepository');
 
@@ -13,6 +14,7 @@ export interface ICreateAssetData {
   accountIdentifier: string;
   custodyType: AssetCustodyType;
   assignedNotarisId: string;
+  inheritanceScheme?: CalculationMethod | null;
   /** @deprecated Kredensial baru disimpan via Secret Sharing (lihat IKeyShareRepository). */
   encryptedSecret?: string;
 }
@@ -23,6 +25,7 @@ export interface IUpdateAssetData {
   platform?: string;
   accountIdentifier?: string;
   assignedNotarisId?: string;
+  inheritanceScheme?: CalculationMethod | null;
   encryptedSecret?: string;
   status?: AssetStatus;
   cooldownEndsAt?: Date | null;
