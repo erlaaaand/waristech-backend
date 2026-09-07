@@ -22,9 +22,13 @@ export class ValidateInvitationUseCase {
    * Dipanggil oleh RegisterAhliWarisUseCase saat registrasi.
    * @returns pewarisId pemilik kode undangan tersebut
    */
-  async execute(
-    code: string,
-  ): Promise<{ pewarisId: string; invitationId: string }> {
+  async execute(code: string): Promise<{
+    pewarisId: string;
+    invitationId: string;
+    relationshipType: string;
+    relationshipDescription: string;
+    supportingDocumentUrl: string | null;
+  }> {
     const invitation = await this.invitationRepo.findByCode(code);
 
     if (!invitation) {
